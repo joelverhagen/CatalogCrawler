@@ -16,6 +16,7 @@ namespace Knapcode.CatalogDownloader
         private readonly DownloadDepth _depth;
         private readonly JsonFormatting _jsonFormatting;
         private readonly int _parallelDownloads;
+        private readonly int? _maxPages;
         private readonly bool _verbose;
         private int _logDepth = 0;
 
@@ -25,6 +26,7 @@ namespace Knapcode.CatalogDownloader
             string dataDir,
             DownloadDepth depth,
             JsonFormatting jsonFormatting,
+            int? maxPages,
             int parallelDownloads,
             bool verbose)
         {
@@ -34,6 +36,7 @@ namespace Knapcode.CatalogDownloader
             _depth = depth;
             _jsonFormatting = jsonFormatting;
             _parallelDownloads = parallelDownloads;
+            _maxPages = maxPages;
             _verbose = verbose;
         }
 
@@ -46,6 +49,7 @@ namespace Knapcode.CatalogDownloader
                 Log($"Data directory: {_dataDir}");
                 Log($"Depth: {_depth}");
                 Log($"JSON formatting: {_jsonFormatting}");
+                Log($"Max pages: {_maxPages}");
                 Log($"Parallel downloads: {_parallelDownloads}");
                 Log("Starting..." + Environment.NewLine);
             }
@@ -82,7 +86,7 @@ namespace Knapcode.CatalogDownloader
             }
 
             _logDepth++;
-
+            var completedPages = 0;
             foreach (var pageItem in pageItems)
             {
                 Log($"Downloading catalog page: {pageItem.Url}");
@@ -91,46 +95,55 @@ namespace Knapcode.CatalogDownloader
                 if (_depth == DownloadDepth.CatalogPage)
                 {
                     WriteCursor(catalogIndex.Path, pageItem.CommitTimestamp);
-                    continue;
                 }
-
-                var leafItems = GetItems(page.Value, cursor);
-                if (_verbose)
+                else
                 {
-                    Log($"Found {leafItems.Count} new leaves in this page.");
-                }
-
-                _logDepth++;
-                try
-                {
-
-                    if (leafItems.Any())
+                    var leafItems = GetItems(page.Value, cursor);
+                    if (_verbose)
                     {
-                        var commitTimestampCount = leafItems
-                            .GroupBy(x => x.CommitTimestamp)
-                            .ToDictionary(x => x.Key, x => x.Count());
-                        var work = new ConcurrentQueue<CatalogItem>(leafItems);
+                        Log($"Found {leafItems.Count} new leaves in this page.");
+                    }
 
-                        var tasks = Enumerable
-                            .Range(0, _parallelDownloads)
-                            .Select(async i =>
-                            {
-                                while (work.TryDequeue(out var leafItem))
+                    _logDepth++;
+                    try
+                    {
+
+                        if (leafItems.Any())
+                        {
+                            var commitTimestampCount = leafItems
+                                .GroupBy(x => x.CommitTimestamp)
+                                .ToDictionary(x => x.Key, x => x.Count());
+                            var work = new ConcurrentQueue<CatalogItem>(leafItems);
+
+                            var tasks = Enumerable
+                                .Range(0, _parallelDownloads)
+                                .Select(async i =>
                                 {
-                                    await DownloadLeafAsync(
-                                        catalogIndex.Path,
-                                        pageItem.CommitTimestamp,
-                                        commitTimestampCount,
-                                        leafItem);
-                                }
-                            })
-                            .ToList();
-                        await Task.WhenAll(tasks);
+                                    while (work.TryDequeue(out var leafItem))
+                                    {
+                                        await DownloadLeafAsync(
+                                            catalogIndex.Path,
+                                            pageItem.CommitTimestamp,
+                                            commitTimestampCount,
+                                            leafItem);
+                                    }
+                                })
+                                .ToList();
+                            await Task.WhenAll(tasks);
+                        }
+                    }
+                    finally
+                    {
+                        _logDepth--;
                     }
                 }
-                finally
+
+                completedPages++;
+                if (_maxPages.HasValue && completedPages >= _maxPages.Value)
                 {
-                    _logDepth--;
+                    _logDepth = 0;
+                    Log($"Completed {completedPages} pages. Terminating.");
+                    return;
                 }
             }
         }

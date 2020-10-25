@@ -12,6 +12,7 @@ namespace Knapcode.CatalogDownloader
         /// <param name="depth">The depth of documents to download.</param>
         /// <param name="jsonFormatting">The setting to use for formatting downloaded JSON.</param>
         /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
+        /// <param name="maxPages">The maximum number of pages to complete before terminating.</param>
         /// <param name="verbose">Whether or not to write verbose messages.</param>
         static async Task<int> Main(
             string serviceIndexUrl = "https://api.nuget.org/v3/index.json",
@@ -19,6 +20,7 @@ namespace Knapcode.CatalogDownloader
             DownloadDepth depth = DownloadDepth.CatalogLeaf,
             JsonFormatting jsonFormatting = JsonFormatting.PrettyWhenUnindented,
             int parallelDownloads = 16,
+            int? maxPages = null,
             bool verbose = false)
         {
             using var httpClient = new HttpClient();
@@ -30,6 +32,7 @@ namespace Knapcode.CatalogDownloader
                 dataDir,
                 depth,
                 jsonFormatting,
+                maxPages,
                 parallelDownloads,
                 verbose);
 
