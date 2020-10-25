@@ -35,4 +35,10 @@
     <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20371.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).Test</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

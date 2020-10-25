@@ -24,7 +24,7 @@ namespace Knapcode.CatalogDownloader
             return 0;
         }
 
-        private static string GetUserAgent()
+        static string GetUserAgent()
         {
             var assembly = typeof(Program).Assembly;
             var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>().Title;

@@ -12,6 +12,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2C292630-E534-4FDB-90A2-558FDD748E04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogDownloader.Test", "test\CatalogDownloader.Test\CatalogDownloader.Test.csproj", "{D334BBD1-3C47-407B-8A01-223F4D50C7F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,12 +26,17 @@ Global
 		{87A7FD72-73B6-42B4-9535-F9E5F90C0668}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87A7FD72-73B6-42B4-9535-F9E5F90C0668}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87A7FD72-73B6-42B4-9535-F9E5F90C0668}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D334BBD1-3C47-407B-8A01-223F4D50C7F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D334BBD1-3C47-407B-8A01-223F4D50C7F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D334BBD1-3C47-407B-8A01-223F4D50C7F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D334BBD1-3C47-407B-8A01-223F4D50C7F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{87A7FD72-73B6-42B4-9535-F9E5F90C0668} = {02CE59F4-6187-4A15-BE24-FFEE3A19948B}
+		{D334BBD1-3C47-407B-8A01-223F4D50C7F5} = {2C292630-E534-4FDB-90A2-558FDD748E04}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {122A7AD1-03AE-4CEC-A0AB-848C6A34B8C7}

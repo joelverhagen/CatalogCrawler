@@ -1,0 +1,13 @@
+{
+  "commitTimeStamp": "2020-10-21T00:00:00Z",
+  "items": [
+    {
+      "@id": "https://localhost/catalog/page0.json",
+      "commitTimeStamp": "2020-10-21T00:00:00Z"
+    },
+    {
+      "@id": "https://localhost/catalog/page1.json",
+      "commitTimeStamp": "2020-10-22T00:00:00Z"
+    }
+  ]
+}

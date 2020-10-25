@@ -1,0 +1,8 @@
+{
+  "resources": [
+    {
+      "@id": "https://localhost/catalog/index.json",
+      "@type": "Catalog/3.0.0"
+    }
+  ]
+}

@@ -52,13 +52,13 @@ namespace Knapcode.CatalogDownloader
                     var commitTimestampCount = leafItems
                         .GroupBy(x => x.CommitTimestamp)
                         .ToDictionary(x => x.Key, x => x.Count());
-                    var work = new ConcurrentBag<CatalogItem>(leafItems);
+                    var work = new ConcurrentQueue<CatalogItem>(leafItems);
 
                     var tasks = Enumerable
                         .Range(0, _parallelDownloads)
                         .Select(async i =>
                         {
-                            while (work.TryTake(out var leafItem))
+                            while (work.TryDequeue(out var leafItem))
                             {
                                 await DownloadLeafAsync(
                                     catalogIndex.Path,
@@ -100,6 +100,7 @@ namespace Knapcode.CatalogDownloader
                 .Items
                 .Where(x => x.CommitTimestamp > cursor)
                 .OrderBy(x => x.CommitTimestamp)
+                .ThenBy(x => x.Url)
                 .ToList();
         }
 
@@ -118,7 +119,7 @@ namespace Knapcode.CatalogDownloader
         static string GetCursorPath(string catalogIndexPath)
         {
             var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-            return Path.Combine(catalogIndexDir, ".meta", "cursor.json");
+            return Path.Combine(catalogIndexDir, ".meta", "download-cursor.json");
         }
 
         static void SetCursor(string catalogIndexPath, DateTimeOffset cursor)
@@ -138,9 +139,8 @@ namespace Knapcode.CatalogDownloader
         {
             const string catalogResourceType = "Catalog/3.0.0";
 
-            using var serviceIndexStream = await _httpClient.GetStreamAsync(_serviceIndexUrl);
-            var serviceIndex = Parse<ServiceIndex>(serviceIndexStream);
-            var catalogResource = serviceIndex.Resources.FirstOrDefault(x => x.Type == catalogResourceType);
+            var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_serviceIndexUrl);
+            var catalogResource = serviceIndex.Value.Resources.FirstOrDefault(x => x.Type == catalogResourceType);
             if (catalogResource == null)
             {
                 throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_serviceIndexUrl}'.");
@@ -188,10 +188,10 @@ namespace Knapcode.CatalogDownloader
                 throw new InvalidCastException($"The URL path '{path}' must not segments starting with a period.");
             }
 
-            // Convert the data/{timestamp} directory to have slashes between time digits, not dots, to reduce the
-            // number of items in a single directory level. With this change, each timestamp folder will be grouped
-            // into a "year/month/day/hour" parent directory.
-            if (pathPieces.Length >= 3 && pathPieces[pathPieces.Length - 3] == "data")
+            // Convert the {timestamp}/{file} paths to have slashes between some time segments instead of dots to
+            // reduce the number of items in a single directory level. With this mapping, each timestamp folder will be
+            // grouped into a "year/month/day/hour" parent directory.
+            if (pathPieces.Length >= 2)
             {
                 var match = Regex.Match(pathPieces[pathPieces.Length - 2], @"^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2}\.\d{2})$");
                 if (match.Success)
