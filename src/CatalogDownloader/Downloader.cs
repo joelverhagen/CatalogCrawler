@@ -1,11 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Knapcode.CatalogDownloader
@@ -13,29 +11,46 @@ namespace Knapcode.CatalogDownloader
     class Downloader
     {
         private readonly HttpClient _httpClient;
+        private readonly string _serviceIndexUrl;
         private readonly string _dataDir;
         private readonly DownloadDepth _depth;
+        private readonly JsonFormatting _jsonFormatting;
         private readonly int _parallelDownloads;
-        private readonly string _serviceIndexUrl;
+        private readonly bool _verbose;
+        private int _logDepth = 0;
 
-        public Downloader(HttpClient httpClient, string serviceIndexUrl, string dataDir, DownloadDepth depth, int parallelDownloads)
+        public Downloader(
+            HttpClient httpClient,
+            string serviceIndexUrl,
+            string dataDir,
+            DownloadDepth depth,
+            JsonFormatting jsonFormatting,
+            int parallelDownloads,
+            bool verbose)
         {
             _httpClient = httpClient;
             _serviceIndexUrl = serviceIndexUrl;
             _dataDir = dataDir;
             _depth = depth;
+            _jsonFormatting = jsonFormatting;
             _parallelDownloads = parallelDownloads;
+            _verbose = verbose;
         }
 
         public async Task DownloadAsync()
         {
-            Console.WriteLine($"Service index: {_serviceIndexUrl}");
-            Console.WriteLine($"Data directory: {_dataDir}");
-            Console.WriteLine($"Depth : {_depth}");
-            Console.WriteLine($"Parallel downloads: {_parallelDownloads}");
-            Console.WriteLine("Starting...");
-            Console.WriteLine();
+            if (_verbose)
+            {
+                Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
+                Log($"Service index: {_serviceIndexUrl}");
+                Log($"Data directory: {_dataDir}");
+                Log($"Depth: {_depth}");
+                Log($"JSON formatting: {_jsonFormatting}");
+                Log($"Parallel downloads: {_parallelDownloads}");
+                Log("Starting..." + Environment.NewLine);
+            }
 
+            Log($"Downloading service index: {_serviceIndexUrl}");
             var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_serviceIndexUrl);
             if (_depth == DownloadDepth.ServiceIndex)
             {
@@ -50,7 +65,7 @@ namespace Knapcode.CatalogDownloader
             }
 
             var catalogIndexUrl = catalogResource.Url;
-            Console.WriteLine($"Catalog index: {catalogIndexUrl}");
+            Log($"Downloading catalog index: {catalogIndexUrl}");
 
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
             if (_depth == DownloadDepth.CatalogIndex)
@@ -58,49 +73,71 @@ namespace Knapcode.CatalogDownloader
                 return;
             }
 
-            var cursor = GetCursor(catalogIndex.Path);
-            Console.WriteLine($"Cursor: {cursor:O}");
+            var cursor = ReadCursor(catalogIndex.Path);
 
             var pageItems = GetItems(catalogIndex.Value, cursor);
-            Console.WriteLine($"Found {pageItems.Count} pages with new data.");
+            if (_verbose)
+            {
+                Log($"Found {pageItems.Count} pages with new data.");
+            }
+
+            _logDepth++;
+
             foreach (var pageItem in pageItems)
             {
-                Console.WriteLine($"Catalog page: {pageItem.Url}");
+                Log($"Downloading catalog page: {pageItem.Url}");
                 var page = await DownloadAndParseAsync<CatalogIndex>(pageItem.Url);
 
                 if (_depth == DownloadDepth.CatalogPage)
                 {
-                    SetCursor(catalogIndex.Path, pageItem.CommitTimestamp);
+                    WriteCursor(catalogIndex.Path, pageItem.CommitTimestamp);
                     continue;
                 }
 
                 var leafItems = GetItems(page.Value, cursor);
-                Console.WriteLine($"Found {leafItems.Count} new leaves in this page.");
-
-                if (leafItems.Any())
+                if (_verbose)
                 {
-                    var commitTimestampCount = leafItems
-                        .GroupBy(x => x.CommitTimestamp)
-                        .ToDictionary(x => x.Key, x => x.Count());
-                    var work = new ConcurrentQueue<CatalogItem>(leafItems);
+                    Log($"Found {leafItems.Count} new leaves in this page.");
+                }
 
-                    var tasks = Enumerable
-                        .Range(0, _parallelDownloads)
-                        .Select(async i =>
-                        {
-                            while (work.TryDequeue(out var leafItem))
+                _logDepth++;
+                try
+                {
+
+                    if (leafItems.Any())
+                    {
+                        var commitTimestampCount = leafItems
+                            .GroupBy(x => x.CommitTimestamp)
+                            .ToDictionary(x => x.Key, x => x.Count());
+                        var work = new ConcurrentQueue<CatalogItem>(leafItems);
+
+                        var tasks = Enumerable
+                            .Range(0, _parallelDownloads)
+                            .Select(async i =>
                             {
-                                await DownloadLeafAsync(
-                                    catalogIndex.Path,
-                                    pageItem.CommitTimestamp,
-                                    commitTimestampCount,
-                                    leafItem);
-                            }
-                        })
-                        .ToList();
-                    await Task.WhenAll(tasks);
+                                while (work.TryDequeue(out var leafItem))
+                                {
+                                    await DownloadLeafAsync(
+                                        catalogIndex.Path,
+                                        pageItem.CommitTimestamp,
+                                        commitTimestampCount,
+                                        leafItem);
+                                }
+                            })
+                            .ToList();
+                        await Task.WhenAll(tasks);
+                    }
+                }
+                finally
+                {
+                    _logDepth--;
                 }
             }
+        }
+
+        void Log(string message)
+        {
+            Console.WriteLine(new string(' ', _logDepth * 2) + message);
         }
 
         async Task DownloadLeafAsync(
@@ -109,7 +146,7 @@ namespace Knapcode.CatalogDownloader
             Dictionary<DateTimeOffset, int> commitTimestampCount,
             CatalogItem leafItem)
         {
-            Console.WriteLine($"Catalog leaf: {leafItem.Url}");
+            Log($"Downloading catalog leaf: {leafItem.Url}");
             await DownloadAsync(leafItem.Url);
 
             lock (commitTimestampCount)
@@ -125,7 +162,7 @@ namespace Knapcode.CatalogDownloader
                     if (leafItem.CommitTimestamp <= pageItemCommitTimestamp
                         && (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key)))
                     {
-                        SetCursor(catalogIndexPath, leafItem.CommitTimestamp);
+                        WriteCursor(catalogIndexPath, leafItem.CommitTimestamp);
                     }
                 }
             }
@@ -141,49 +178,41 @@ namespace Knapcode.CatalogDownloader
                 .ToList();
         }
 
-        DateTimeOffset GetCursor(string catalogIndexPath)
+        DateTimeOffset ReadCursor(string catalogIndexPath)
         {
-            var cursorPath = GetCursorPath(catalogIndexPath);
+            var cursorPath = GetCursorPath(catalogIndexPath, _depth);
 
             if (!File.Exists(cursorPath))
             {
                 return DateTimeOffset.MinValue;
             }
 
-            return Parse<DateTimeOffset>(cursorPath);
+            var cursor = JsonFileHelper.ReadJson<DateTimeOffset>(cursorPath);
+            if (_verbose)
+            {
+                Log($"Read {_depth} cursor: {cursor:O}");
+            }
+
+            return cursor;
         }
 
-        string GetCursorPath(string catalogIndexPath)
+        static string GetCursorPath(string catalogIndexPath, DownloadDepth depth)
         {
             var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-            return Path.Combine(catalogIndexDir, ".meta", $"cursor.download.{_depth}.json");
+            return Path.Combine(catalogIndexDir, ".meta", $"cursor.download.{depth}.json");
         }
 
-        void SetCursor(string catalogIndexPath, DateTimeOffset cursor)
+        void WriteCursor(string catalogIndexPath, DateTimeOffset cursor)
         {
-            Console.WriteLine($"Setting cursor: {cursor:O}");
-            var cursorPath = GetCursorPath(catalogIndexPath);
+            var cursorPath = GetCursorPath(catalogIndexPath, _depth);
             var cursorDir = Path.GetDirectoryName(cursorPath);
             Directory.CreateDirectory(cursorDir);
-            using var fileStream = new FileStream(cursorPath, FileMode.Create);
-            using var textWriter = new StreamWriter(fileStream);
-            using var jsonWriter = new JsonTextWriter(textWriter);
-            var serializer = new JsonSerializer();
-            serializer.Serialize(jsonWriter, cursor);
-        }
+            JsonFileHelper.WriteJson(cursorPath, cursor);
 
-        static T Parse<T>(string path)
-        {
-            using var stream = File.OpenRead(path);
-            return Parse<T>(stream);
-        }
-
-        static T Parse<T>(Stream stream)
-        {
-            using var textReader = new StreamReader(stream);
-            using var jsonReader = new JsonTextReader(textReader);
-            var serializer = new JsonSerializer();
-            return serializer.Deserialize<T>(jsonReader);
+            if (_verbose)
+            {
+                Log($"Wrote {_depth} cursor: {cursor:O}");
+            }
         }
 
         async Task<string> DownloadAsync(string url)
@@ -205,24 +234,10 @@ namespace Knapcode.CatalogDownloader
                 throw new InvalidOperationException($"The URL '{url}' must have a path.");
             }
 
-            var pathPieces = path.Split('/');
-            if (pathPieces.Any(p => p.StartsWith(".")))
-            {
-                throw new InvalidCastException($"The URL path '{path}' must not segments starting with a period.");
-            }
-
-            // Convert the {timestamp}/{file} paths to have slashes between some time segments instead of dots to
-            // reduce the number of items in a single directory level. With this mapping, each timestamp folder will be
-            // grouped into a "year/month/day/hour" parent directory.
-            if (pathPieces.Length >= 2)
-            {
-                var match = Regex.Match(pathPieces[pathPieces.Length - 2], @"^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2}\.\d{2})$");
-                if (match.Success)
-                {
-                    pathPieces[pathPieces.Length - 2] = match.Result("$1/$2/$3/$4/$5");
-                    path = string.Join("/", pathPieces);
-                }
-            }
+            var pathFormatter = new PathFormatter(path);
+            pathFormatter.FormatPagePath();
+            pathFormatter.FormatLeafPath();
+            path = pathFormatter.Path;
 
             var hostDir = Path.GetFullPath(Path.Combine(_dataDir, uri.Host));
             var destPath = Path.GetFullPath(Path.Combine(hostDir, path));
@@ -231,6 +246,12 @@ namespace Knapcode.CatalogDownloader
             Directory.CreateDirectory(destDir);
 
             await DownloadWithRetryAsync(url, destPath);
+
+            var rewrite = JsonFileHelper.RewriteJson(destPath, _jsonFormatting);
+            if (_verbose && rewrite)
+            {
+                Log($"The JSON at path {destPath} was rewritten.");
+            }
 
             return destPath;
         }
@@ -249,7 +270,7 @@ namespace Knapcode.CatalogDownloader
                 }
                 catch (Exception ex) when (i < maxAttemts - 1)
                 {
-                    Console.WriteLine($"Retrying download of {url} to {destPath}. Exception:{Environment.NewLine}{ex}");
+                    Log($"Retrying download of {url} to {destPath}. Exception:{Environment.NewLine}{ex}");
                 }
             }
         }
@@ -257,7 +278,7 @@ namespace Knapcode.CatalogDownloader
         async Task<ParsedFile<T>> DownloadAndParseAsync<T>(string url)
         {
             var destPath = await DownloadAsync(url);
-            var value = Parse<T>(destPath);
+            var value = JsonFileHelper.ReadJson<T>(destPath);
             return new ParsedFile<T>(destPath, value);
         }
     }

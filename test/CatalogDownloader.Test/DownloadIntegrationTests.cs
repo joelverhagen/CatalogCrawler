@@ -21,7 +21,7 @@ namespace Knapcode.CatalogDownloader
         private const string CursorFormat = "catalog/.meta/cursor.download.{0}.json";
 
         private readonly DefaultWebApplicationFactory<StaticFilesStartup> _factory;
-        private readonly string _testDir;
+        private readonly TestDirectory _testDir;
         private readonly string _dataDir;
         private readonly string _webRoot;
         private readonly WebApplicationFactory<StaticFilesStartup> _builder;
@@ -33,7 +33,7 @@ namespace Knapcode.CatalogDownloader
         public DownloadIntegrationTests(DefaultWebApplicationFactory<StaticFilesStartup> factory)
         {
             _factory = factory;
-            _testDir = Path.Combine(Path.GetTempPath(), "Knapcode", Guid.NewGuid().ToString());
+            _testDir = new TestDirectory();
             _dataDir = Path.Combine(_testDir, "data");
             _webRoot = Path.Combine(_testDir, "wwwroot");
 
@@ -54,16 +54,15 @@ namespace Knapcode.CatalogDownloader
             serviceIndexUrl: "https://localhost/index.json",
             dataDir: _dataDir,
             depth: _depth,
-            parallelDownloads: 1);
+            jsonFormatting: JsonFormatting.Pretty,
+            parallelDownloads: 1,
+            verbose: true);
 
         public void Dispose()
         {
             _httpClient.Dispose();
             _builder.Dispose();
-            if (Directory.Exists(_testDir))
-            {
-                Directory.Delete(_testDir, recursive: true);
-            }
+            _testDir.Dispose();
         }
 
         [Theory]
@@ -80,8 +79,8 @@ namespace Knapcode.CatalogDownloader
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json", "catalog/page0-page499/page0.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json", "catalog/page0-page499/page1.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
@@ -105,8 +104,8 @@ namespace Knapcode.CatalogDownloader
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json", "catalog/page0-page499/page0.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json", "catalog/page0-page499/page1.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
@@ -127,7 +126,7 @@ namespace Knapcode.CatalogDownloader
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step2, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json", "catalog/page0-page499/page0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
@@ -151,13 +150,41 @@ namespace Knapcode.CatalogDownloader
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step2, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step2, "catalog/page0.json", "catalog/page0-page499/page0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertRequestCount();
             AssertCursor("\"2020-10-21T00:00:00+00:00\"");
 
             await VerifyStep3Async();
+        }
+
+        private async Task VerifyStep1Async()
+        {
+            CopyFilesToWebRoot(Step1);
+
+            await Target.DownloadAsync();
+
+            AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
+            AssertDownload(DownloadDepth.CatalogIndex, Step1, "catalog/index.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step1, "catalog/page0.json", "catalog/page0-page499/page0.json");
+            AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
+            AssertRequestCount();
+            AssertCursor("\"2020-10-20T00:00:00+00:00\"");
+        }
+
+        private async Task VerifyStep3Async()
+        {
+            CopyFilesToWebRoot(Step3);
+
+            await Target.DownloadAsync();
+
+            AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
+            AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
+            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json", "catalog/page0-page499/page1.json");
+            AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
+            AssertRequestCount();
+            AssertCursor("\"2020-10-22T00:00:00+00:00\"");
         }
 
         private void AssertCursor(string value)
@@ -172,34 +199,6 @@ namespace Knapcode.CatalogDownloader
                 var fullCursorPath = GetFullFilePath(cursorPath);
                 Assert.False(File.Exists(fullCursorPath), $"The cursor should not exist as path: {fullCursorPath}");
             }
-        }
-
-        private async Task VerifyStep3Async()
-        {
-            CopyFilesToWebRoot(Step3);
-
-            await Target.DownloadAsync();
-
-            AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
-            AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json");
-            AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
-            AssertRequestCount();
-            AssertCursor("\"2020-10-22T00:00:00+00:00\"");
-        }
-
-        private async Task VerifyStep1Async()
-        {
-            CopyFilesToWebRoot(Step1);
-
-            await Target.DownloadAsync();
-
-            AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
-            AssertDownload(DownloadDepth.CatalogIndex, Step1, "catalog/index.json");
-            AssertDownload(DownloadDepth.CatalogPage, Step1, "catalog/page0.json");
-            AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
-            AssertRequestCount();
-            AssertCursor("\"2020-10-20T00:00:00+00:00\"");
         }
 
         private void AssertRequestCount()

@@ -10,17 +10,29 @@ namespace Knapcode.CatalogDownloader
         /// <param name="serviceIndexUrl">The NuGet V3 service index URL.</param>
         /// <param name="dataDir">The directory for storing catalog documents.</param>
         /// <param name="depth">The depth of documents to download.</param>
+        /// <param name="jsonFormatting">The setting to use for formatting downloaded JSON.</param>
         /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
+        /// <param name="verbose">Whether or not to write verbose messages.</param>
         static async Task<int> Main(
             string serviceIndexUrl = "https://api.nuget.org/v3/index.json",
             string dataDir = "data",
-            DownloadDepth depth = DownloadDepth.CatalogPage,
-            int parallelDownloads = 16)
+            DownloadDepth depth = DownloadDepth.CatalogLeaf,
+            JsonFormatting jsonFormatting = JsonFormatting.PrettyWhenUnindented,
+            int parallelDownloads = 16,
+            bool verbose = false)
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", GetUserAgent());
 
-            var downloader = new Downloader(httpClient, serviceIndexUrl, dataDir, depth, parallelDownloads);
+            var downloader = new Downloader(
+                httpClient,
+                serviceIndexUrl,
+                dataDir,
+                depth,
+                jsonFormatting,
+                parallelDownloads,
+                verbose);
+
             await downloader.DownloadAsync();
             return 0;
         }

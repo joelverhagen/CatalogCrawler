@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CatalogDownloader": {
+      "commandName": "Project",
+      "commandLineArgs": "--parallel-downloads 1 --verbose"
+    }
+  }
+}
