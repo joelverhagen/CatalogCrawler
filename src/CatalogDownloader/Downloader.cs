@@ -70,7 +70,7 @@ namespace Knapcode.CatalogDownloader
 
                 if (_depth == DownloadDepth.CatalogPage)
                 {
-                    SetCursor(catalogIndex.Path, page.Value.Items.Max(x => x.CommitTimestamp));
+                    SetCursor(catalogIndex.Path, pageItem.CommitTimestamp);
                     continue;
                 }
 
@@ -92,6 +92,7 @@ namespace Knapcode.CatalogDownloader
                             {
                                 await DownloadLeafAsync(
                                     catalogIndex.Path,
+                                    pageItem.CommitTimestamp,
                                     commitTimestampCount,
                                     leafItem);
                             }
@@ -104,6 +105,7 @@ namespace Knapcode.CatalogDownloader
 
         async Task DownloadLeafAsync(
             string catalogIndexPath,
+            DateTimeOffset pageItemCommitTimestamp,
             Dictionary<DateTimeOffset, int> commitTimestampCount,
             CatalogItem leafItem)
         {
@@ -116,7 +118,12 @@ namespace Knapcode.CatalogDownloader
                 if (newCount == 0)
                 {
                     commitTimestampCount.Remove(leafItem.CommitTimestamp);
-                    if (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key))
+
+                    // Write the timestamp only it less than the page item commit timestamp to protect against partial
+                    // commits to the catalog. Also, only write the timestamp if it's the last item in the commit and
+                    // it's the lowest commit timestamp of all pending leaves.
+                    if (leafItem.CommitTimestamp <= pageItemCommitTimestamp
+                        && (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key)))
                     {
                         SetCursor(catalogIndexPath, leafItem.CommitTimestamp);
                     }
