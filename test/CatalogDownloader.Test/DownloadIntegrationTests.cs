@@ -56,6 +56,7 @@ namespace Knapcode.CatalogDownloader
             depth: _depth,
             jsonFormatting: JsonFormatting.Pretty,
             maxPages: null,
+            formatPaths: true,
             parallelDownloads: 1,
             verbose: true);
 

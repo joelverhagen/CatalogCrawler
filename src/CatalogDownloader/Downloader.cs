@@ -15,8 +15,9 @@ namespace Knapcode.CatalogDownloader
         private readonly string _dataDir;
         private readonly DownloadDepth _depth;
         private readonly JsonFormatting _jsonFormatting;
-        private readonly int _parallelDownloads;
         private readonly int? _maxPages;
+        private readonly bool _formatPaths;
+        private readonly int _parallelDownloads;
         private readonly bool _verbose;
         private int _logDepth = 0;
 
@@ -27,6 +28,7 @@ namespace Knapcode.CatalogDownloader
             DownloadDepth depth,
             JsonFormatting jsonFormatting,
             int? maxPages,
+            bool formatPaths,
             int parallelDownloads,
             bool verbose)
         {
@@ -35,8 +37,9 @@ namespace Knapcode.CatalogDownloader
             _dataDir = dataDir;
             _depth = depth;
             _jsonFormatting = jsonFormatting;
-            _parallelDownloads = parallelDownloads;
             _maxPages = maxPages;
+            _formatPaths = formatPaths;
+            _parallelDownloads = parallelDownloads;
             _verbose = verbose;
         }
 
@@ -248,8 +251,13 @@ namespace Knapcode.CatalogDownloader
             }
 
             var pathFormatter = new PathFormatter(path);
-            pathFormatter.FormatPagePath();
-            pathFormatter.FormatLeafPath();
+
+            if (_formatPaths)
+            {
+                pathFormatter.FormatPagePath();
+                pathFormatter.FormatLeafPath();
+            }
+
             path = pathFormatter.Path;
 
             var hostDir = Path.GetFullPath(Path.Combine(_dataDir, uri.Host));

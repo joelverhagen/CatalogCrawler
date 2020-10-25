@@ -11,16 +11,18 @@ namespace Knapcode.CatalogDownloader
         /// <param name="dataDir">The directory for storing catalog documents.</param>
         /// <param name="depth">The depth of documents to download.</param>
         /// <param name="jsonFormatting">The setting to use for formatting downloaded JSON.</param>
-        /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
         /// <param name="maxPages">The maximum number of pages to complete before terminating.</param>
+        /// <param name="formatPaths">Format paths to mitigate directories with many files.</param>
+        /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
         /// <param name="verbose">Whether or not to write verbose messages.</param>
         static async Task<int> Main(
             string serviceIndexUrl = "https://api.nuget.org/v3/index.json",
             string dataDir = "data",
             DownloadDepth depth = DownloadDepth.CatalogLeaf,
-            JsonFormatting jsonFormatting = JsonFormatting.PrettyWhenUnindented,
-            int parallelDownloads = 16,
+            JsonFormatting jsonFormatting = JsonFormatting.Unchanged,
             int? maxPages = null,
+            bool formatPaths = false,
+            int parallelDownloads = 16,
             bool verbose = false)
         {
             using var httpClient = new HttpClient();
@@ -33,6 +35,7 @@ namespace Knapcode.CatalogDownloader
                 depth,
                 jsonFormatting,
                 maxPages,
+                formatPaths,
                 parallelDownloads,
                 verbose);
 
