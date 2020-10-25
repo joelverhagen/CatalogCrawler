@@ -14,14 +14,16 @@ namespace Knapcode.CatalogDownloader
     {
         private readonly HttpClient _httpClient;
         private readonly string _dataDir;
+        private readonly DownloadDepth _depth;
         private readonly int _parallelDownloads;
         private readonly string _serviceIndexUrl;
 
-        public Downloader(HttpClient httpClient, string serviceIndexUrl, string dataDir, int parallelDownloads)
+        public Downloader(HttpClient httpClient, string serviceIndexUrl, string dataDir, DownloadDepth depth, int parallelDownloads)
         {
             _httpClient = httpClient;
             _serviceIndexUrl = serviceIndexUrl;
             _dataDir = dataDir;
+            _depth = depth;
             _parallelDownloads = parallelDownloads;
         }
 
@@ -29,12 +31,33 @@ namespace Knapcode.CatalogDownloader
         {
             Console.WriteLine($"Service index: {_serviceIndexUrl}");
             Console.WriteLine($"Data directory: {_dataDir}");
+            Console.WriteLine($"Depth : {_depth}");
             Console.WriteLine($"Parallel downloads: {_parallelDownloads}");
+            Console.WriteLine("Starting...");
+            Console.WriteLine();
 
-            var catalogIndexUrl = await GetCatalogIndexUrlAsync();
+            var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_serviceIndexUrl);
+            if (_depth == DownloadDepth.ServiceIndex)
+            {
+                return;
+            }
+
+            const string catalogResourceType = "Catalog/3.0.0";
+            var catalogResource = serviceIndex.Value.Resources.SingleOrDefault(x => x.Type == catalogResourceType);
+            if (catalogResource == null)
+            {
+                throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_serviceIndexUrl}'.");
+            }
+
+            var catalogIndexUrl = catalogResource.Url;
             Console.WriteLine($"Catalog index: {catalogIndexUrl}");
 
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
+            if (_depth == DownloadDepth.CatalogIndex)
+            {
+                return;
+            }
+
             var cursor = GetCursor(catalogIndex.Path);
             Console.WriteLine($"Cursor: {cursor:O}");
 
@@ -44,6 +67,13 @@ namespace Knapcode.CatalogDownloader
             {
                 Console.WriteLine($"Catalog page: {pageItem.Url}");
                 var page = await DownloadAndParseAsync<CatalogIndex>(pageItem.Url);
+
+                if (_depth == DownloadDepth.CatalogPage)
+                {
+                    SetCursor(catalogIndex.Path, page.Value.Items.Max(x => x.CommitTimestamp));
+                    continue;
+                }
+
                 var leafItems = GetItems(page.Value, cursor);
                 Console.WriteLine($"Found {leafItems.Count} new leaves in this page.");
 
@@ -104,7 +134,7 @@ namespace Knapcode.CatalogDownloader
                 .ToList();
         }
 
-        static DateTimeOffset GetCursor(string catalogIndexPath)
+        DateTimeOffset GetCursor(string catalogIndexPath)
         {
             var cursorPath = GetCursorPath(catalogIndexPath);
 
@@ -116,13 +146,13 @@ namespace Knapcode.CatalogDownloader
             return Parse<DateTimeOffset>(cursorPath);
         }
 
-        static string GetCursorPath(string catalogIndexPath)
+        string GetCursorPath(string catalogIndexPath)
         {
             var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-            return Path.Combine(catalogIndexDir, ".meta", "download-cursor.json");
+            return Path.Combine(catalogIndexDir, ".meta", $"cursor.download.{_depth}.json");
         }
 
-        static void SetCursor(string catalogIndexPath, DateTimeOffset cursor)
+        void SetCursor(string catalogIndexPath, DateTimeOffset cursor)
         {
             Console.WriteLine($"Setting cursor: {cursor:O}");
             var cursorPath = GetCursorPath(catalogIndexPath);
@@ -133,20 +163,6 @@ namespace Knapcode.CatalogDownloader
             using var jsonWriter = new JsonTextWriter(textWriter);
             var serializer = new JsonSerializer();
             serializer.Serialize(jsonWriter, cursor);
-        }
-
-        async Task<string> GetCatalogIndexUrlAsync()
-        {
-            const string catalogResourceType = "Catalog/3.0.0";
-
-            var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_serviceIndexUrl);
-            var catalogResource = serviceIndex.Value.Resources.FirstOrDefault(x => x.Type == catalogResourceType);
-            if (catalogResource == null)
-            {
-                throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_serviceIndexUrl}'.");
-            }
-
-            return catalogResource.Url;
         }
 
         static T Parse<T>(string path)
