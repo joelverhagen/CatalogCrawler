@@ -41,7 +41,8 @@ namespace Knapcode.CatalogDownloader
                     FormatPaths = formatPaths,
                     ParallelDownloads = parallelDownloads,
                     Verbose = verbose,
-                });
+                },
+                NullVisitor.Instance);
 
             await downloader.DownloadAsync();
             return 0;

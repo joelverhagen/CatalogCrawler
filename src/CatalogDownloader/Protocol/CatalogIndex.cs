@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Knapcode.CatalogDownloader
+﻿namespace Knapcode.CatalogDownloader
 {
-    class CatalogIndex
+    class CatalogIndex : BaseCatalogList<CatalogPageItem>
     {
-        public DateTimeOffset CommitTimestamp { get; set; }
-        public List<CatalogItem> Items { get; set; }
     }
 }

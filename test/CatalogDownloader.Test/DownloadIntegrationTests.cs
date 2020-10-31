@@ -62,7 +62,8 @@ namespace Knapcode.CatalogDownloader
                 FormatPaths = true,
                 ParallelDownloads = 1,
                 Verbose = true,
-            });
+            },
+            NullVisitor.Instance);
 
         public void Dispose()
         {

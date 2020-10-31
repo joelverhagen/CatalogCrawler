@@ -3,7 +3,7 @@ using System;
 
 namespace Knapcode.CatalogDownloader
 {
-    class CatalogItem
+    abstract class BaseCatalogItem
     {
         [JsonProperty("@id")]
         public string Url { get; set; }

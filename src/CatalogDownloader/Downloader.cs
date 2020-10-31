@@ -12,14 +12,17 @@ namespace Knapcode.CatalogDownloader
     {
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
+        private readonly IVisitor _visitor;
         private int _logDepth = 0;
 
         public Downloader(
             HttpClient httpClient,
-            DownloaderConfiguration config)
+            DownloaderConfiguration config,
+            IVisitor visitor)
         {
             _httpClient = httpClient;
             _config = config;
+            _visitor = visitor;
         }
 
         public async Task DownloadAsync()
@@ -40,6 +43,7 @@ namespace Knapcode.CatalogDownloader
 
             Log($"Downloading service index: {_config.ServiceIndexUrl}");
             var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_config.ServiceIndexUrl);
+            await _visitor.OnServiceIndexAsync(serviceIndex.Value);
             if (_config.Depth == DownloadDepth.ServiceIndex)
             {
                 return;
@@ -56,6 +60,7 @@ namespace Knapcode.CatalogDownloader
             Log($"Downloading catalog index: {catalogIndexUrl}");
 
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
+            await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
             if (_config.Depth == DownloadDepth.CatalogIndex)
             {
                 return;
@@ -74,8 +79,8 @@ namespace Knapcode.CatalogDownloader
             foreach (var pageItem in pageItems)
             {
                 Log($"Downloading catalog page: {pageItem.Url}");
-                var page = await DownloadAndParseAsync<CatalogIndex>(pageItem.Url);
-
+                var page = await DownloadAndParseAsync<CatalogPage>(pageItem.Url);
+                await _visitor.OnCatalogPageAsync(page.Value);
                 if (_config.Depth == DownloadDepth.CatalogPage)
                 {
                     WriteCursor(catalogIndex.Path, pageItem.CommitTimestamp);
@@ -97,7 +102,7 @@ namespace Knapcode.CatalogDownloader
                             var commitTimestampCount = leafItems
                                 .GroupBy(x => x.CommitTimestamp)
                                 .ToDictionary(x => x.Key, x => x.Count());
-                            var work = new ConcurrentQueue<CatalogItem>(leafItems);
+                            var work = new ConcurrentQueue<BaseCatalogItem>(leafItems);
 
                             var tasks = Enumerable
                                 .Range(0, _config.ParallelDownloads)
@@ -141,7 +146,7 @@ namespace Knapcode.CatalogDownloader
             string catalogIndexPath,
             DateTimeOffset pageItemCommitTimestamp,
             Dictionary<DateTimeOffset, int> commitTimestampCount,
-            CatalogItem leafItem)
+            BaseCatalogItem leafItem)
         {
             Log($"Downloading catalog leaf: {leafItem.Url}");
             var destPath = GetDestinationPath(leafItem.Url);
@@ -166,9 +171,9 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        static List<CatalogItem> GetItems(CatalogIndex catalogIndex, DateTimeOffset cursor)
+        static List<T> GetItems<T>(BaseCatalogList<T> catalogList, DateTimeOffset cursor) where T : BaseCatalogItem
         {
-            return catalogIndex
+            return catalogList
                 .Items
                 .Where(x => x.CommitTimestamp > cursor)
                 .OrderBy(x => x.CommitTimestamp)
