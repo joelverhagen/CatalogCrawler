@@ -2,6 +2,7 @@
 {
     class DownloaderConfiguration
     {
+        public string CursurSuffix { get; set; }
         public string ServiceIndexUrl { get; set; }
         public string DataDirectory { get; set; }
         public DownloadDepth Depth { get; set; }

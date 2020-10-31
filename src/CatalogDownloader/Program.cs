@@ -15,7 +15,7 @@ namespace Knapcode.CatalogDownloader
         /// <param name="formatPaths">Format paths to mitigate directories with many files.</param>
         /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
         /// <param name="verbose">Whether or not to write verbose messages.</param>
-        static async Task<int> Main(
+        public static async Task Main(
             string serviceIndexUrl = "https://api.nuget.org/v3/index.json",
             string dataDir = "data",
             DownloadDepth depth = DownloadDepth.CatalogLeaf,
@@ -27,11 +27,34 @@ namespace Knapcode.CatalogDownloader
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", GetUserAgent());
+            await ExecuteAsync(
+                httpClient,
+                serviceIndexUrl,
+                dataDir,
+                depth,
+                jsonFormatting,
+                maxPages,
+                formatPaths,
+                parallelDownloads,
+                verbose);
+        }
 
+        public static async Task ExecuteAsync(
+            HttpClient httpClient,
+            string serviceIndexUrl,
+            string dataDir,
+            DownloadDepth depth,
+            JsonFormatting jsonFormatting,
+            int? maxPages,
+            bool formatPaths,
+            int parallelDownloads,
+            bool verbose)
+        {
             var downloader = new Downloader(
                 httpClient,
                 new DownloaderConfiguration
                 {
+                    CursurSuffix = $"download.{depth}",
                     ServiceIndexUrl = serviceIndexUrl,
                     DataDirectory = dataDir,
                     Depth = depth,
@@ -45,7 +68,6 @@ namespace Knapcode.CatalogDownloader
                 NullVisitor.Instance);
 
             await downloader.DownloadAsync();
-            return 0;
         }
 
         static string GetUserAgent()

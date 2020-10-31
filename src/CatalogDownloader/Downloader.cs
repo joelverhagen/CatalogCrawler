@@ -30,6 +30,7 @@ namespace Knapcode.CatalogDownloader
             if (_config.Verbose)
             {
                 Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
+                Log($"Cursor suffix: {_config.CursurSuffix}");
                 Log($"Service index: {_config.ServiceIndexUrl}");
                 Log($"Data directory: {_config.DataDirectory}");
                 Log($"Depth: {_config.Depth}");
@@ -183,7 +184,7 @@ namespace Knapcode.CatalogDownloader
 
         DateTimeOffset ReadCursor(string catalogIndexPath)
         {
-            var cursorPath = GetCursorPath(catalogIndexPath, _config.Depth);
+            var cursorPath = GetCursorPath(catalogIndexPath);
 
             if (!File.Exists(cursorPath))
             {
@@ -199,15 +200,15 @@ namespace Knapcode.CatalogDownloader
             return cursor;
         }
 
-        static string GetCursorPath(string catalogIndexPath, DownloadDepth depth)
+        string GetCursorPath(string catalogIndexPath)
         {
             var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-            return Path.Combine(catalogIndexDir, ".meta", $"cursor.download.{depth}.json");
+            return Path.Combine(catalogIndexDir, ".meta", $"cursor.{_config.CursurSuffix}.json");
         }
 
         void WriteCursor(string catalogIndexPath, DateTimeOffset cursor)
         {
-            var cursorPath = GetCursorPath(catalogIndexPath, _config.Depth);
+            var cursorPath = GetCursorPath(catalogIndexPath);
             var cursorDir = Path.GetDirectoryName(cursorPath);
             Directory.CreateDirectory(cursorDir);
             JsonFileHelper.WriteJson(cursorPath, cursor);

@@ -49,27 +49,27 @@ namespace Knapcode.CatalogDownloader
             .Cast<DownloadDepth>()
             .Select(x => new object[] { x });
 
-        private Downloader Target => new Downloader(
-            _httpClient,
-            new DownloaderConfiguration
-            {
-                ServiceIndexUrl = "https://localhost/index.json",
-                DataDirectory = _dataDir,
-                Depth = _depth,
-                JsonFormatting = JsonFormatting.Pretty,
-                MaxPages = null,
-                SaveToDisk = true,
-                FormatPaths = true,
-                ParallelDownloads = 1,
-                Verbose = true,
-            },
-            NullVisitor.Instance);
-
         public void Dispose()
         {
             _httpClient.Dispose();
             _builder.Dispose();
             _testDir.Dispose();
+        }
+
+        [Fact]
+        public async Task VerifyAgainstNuGetOrg()
+        {
+            await Program.Main(
+                dataDir: _dataDir,
+                maxPages: 1,
+                verbose: true);
+
+            var baseDir = Path.Combine(_dataDir, "api.nuget.org", "v3");
+
+            AssertFileExists(Path.Combine(baseDir, "index.json"));
+            AssertFileExists(Path.Combine(baseDir, "catalog0", "index.json"));
+            AssertFileExists(Path.Combine(baseDir, "catalog0", "page0.json"));
+            AssertCursor("\"2018-06-09T17:29:27.9281869+00:00\"");
         }
 
         [Theory]
@@ -82,7 +82,7 @@ namespace Knapcode.CatalogDownloader
             CopyFilesToWebRoot(Step2);
             CopyFilesToWebRoot(Step3);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
@@ -107,7 +107,7 @@ namespace Knapcode.CatalogDownloader
             CopyFilesToWebRoot(Step2);
             CopyFilesToWebRoot(Step3);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
@@ -129,7 +129,7 @@ namespace Knapcode.CatalogDownloader
             CopyFilesToWebRoot(Step1);
             CopyFilesToWebRoot(Step2);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step2, "catalog/index.json");
@@ -153,7 +153,7 @@ namespace Knapcode.CatalogDownloader
 
             CopyFilesToWebRoot(Step2);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step2, "catalog/index.json");
@@ -170,7 +170,7 @@ namespace Knapcode.CatalogDownloader
         {
             CopyFilesToWebRoot(Step1);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step1, "catalog/index.json");
@@ -184,7 +184,7 @@ namespace Knapcode.CatalogDownloader
         {
             CopyFilesToWebRoot(Step3);
 
-            await Target.DownloadAsync();
+            await ExecuteAsync();
 
             AssertDownload(DownloadDepth.ServiceIndex, Step1, "index.json");
             AssertDownload(DownloadDepth.CatalogIndex, Step3, "catalog/index.json");
@@ -192,6 +192,20 @@ namespace Knapcode.CatalogDownloader
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertRequestCount();
             AssertCursor("\"2020-10-22T00:00:00+00:00\"");
+        }
+
+        private async Task ExecuteAsync()
+        {
+            await Program.ExecuteAsync(
+                httpClient: _httpClient,
+                serviceIndexUrl: "https://localhost/index.json",
+                dataDir: _dataDir,
+                depth: _depth,
+                jsonFormatting: JsonFormatting.Pretty,
+                maxPages: null,
+                formatPaths: true,
+                parallelDownloads: 1,
+                verbose: true);
         }
 
         private void AssertCursor(string value)
@@ -237,8 +251,13 @@ namespace Knapcode.CatalogDownloader
         private void AssertFile(string expected, string filePath)
         {
             var fullFilePath = GetFullFilePath(filePath);
-            Assert.True(File.Exists(fullFilePath), $"A file should exist at path: {fullFilePath}");
+            AssertFileExists(fullFilePath);
             Assert.Equal(expected, File.ReadAllText(fullFilePath));
+        }
+
+        private static void AssertFileExists(string fullFilePath)
+        {
+            Assert.True(File.Exists(fullFilePath), $"A file should exist at path: {fullFilePath}");
         }
 
         private string GetFullFilePath(string filePath)
