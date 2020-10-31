@@ -30,14 +30,18 @@ namespace Knapcode.CatalogDownloader
 
             var downloader = new Downloader(
                 httpClient,
-                serviceIndexUrl,
-                dataDir,
-                depth,
-                jsonFormatting,
-                maxPages,
-                formatPaths,
-                parallelDownloads,
-                verbose);
+                new DownloaderConfiguration
+                {
+                    ServiceIndexUrl = serviceIndexUrl,
+                    DataDirectory = dataDir,
+                    Depth = depth,
+                    JsonFormatting = jsonFormatting,
+                    MaxPages = maxPages,
+                    SaveToDisk = true,
+                    FormatPaths = formatPaths,
+                    ParallelDownloads = parallelDownloads,
+                    Verbose = verbose,
+                });
 
             await downloader.DownloadAsync();
             return 0;

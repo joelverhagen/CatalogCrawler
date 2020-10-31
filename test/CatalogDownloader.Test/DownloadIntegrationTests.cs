@@ -51,14 +51,18 @@ namespace Knapcode.CatalogDownloader
 
         private Downloader Target => new Downloader(
             _httpClient,
-            serviceIndexUrl: "https://localhost/index.json",
-            dataDir: _dataDir,
-            depth: _depth,
-            jsonFormatting: JsonFormatting.Pretty,
-            maxPages: null,
-            formatPaths: true,
-            parallelDownloads: 1,
-            verbose: true);
+            new DownloaderConfiguration
+            {
+                ServiceIndexUrl = "https://localhost/index.json",
+                DataDirectory = _dataDir,
+                Depth = _depth,
+                JsonFormatting = JsonFormatting.Pretty,
+                MaxPages = null,
+                SaveToDisk = true,
+                FormatPaths = true,
+                ParallelDownloads = 1,
+                Verbose = true,
+            });
 
         public void Dispose()
         {

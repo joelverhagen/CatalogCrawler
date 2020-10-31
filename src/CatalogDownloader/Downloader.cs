@@ -11,55 +11,36 @@ namespace Knapcode.CatalogDownloader
     class Downloader
     {
         private readonly HttpClient _httpClient;
-        private readonly string _serviceIndexUrl;
-        private readonly string _dataDir;
-        private readonly DownloadDepth _depth;
-        private readonly JsonFormatting _jsonFormatting;
-        private readonly int? _maxPages;
-        private readonly bool _formatPaths;
-        private readonly int _parallelDownloads;
-        private readonly bool _verbose;
+        private readonly DownloaderConfiguration _config;
         private int _logDepth = 0;
 
         public Downloader(
             HttpClient httpClient,
-            string serviceIndexUrl,
-            string dataDir,
-            DownloadDepth depth,
-            JsonFormatting jsonFormatting,
-            int? maxPages,
-            bool formatPaths,
-            int parallelDownloads,
-            bool verbose)
+            DownloaderConfiguration config)
         {
             _httpClient = httpClient;
-            _serviceIndexUrl = serviceIndexUrl;
-            _dataDir = dataDir;
-            _depth = depth;
-            _jsonFormatting = jsonFormatting;
-            _maxPages = maxPages;
-            _formatPaths = formatPaths;
-            _parallelDownloads = parallelDownloads;
-            _verbose = verbose;
+            _config = config;
         }
 
         public async Task DownloadAsync()
         {
-            if (_verbose)
+            if (_config.Verbose)
             {
                 Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
-                Log($"Service index: {_serviceIndexUrl}");
-                Log($"Data directory: {_dataDir}");
-                Log($"Depth: {_depth}");
-                Log($"JSON formatting: {_jsonFormatting}");
-                Log($"Max pages: {_maxPages}");
-                Log($"Parallel downloads: {_parallelDownloads}");
+                Log($"Service index: {_config.ServiceIndexUrl}");
+                Log($"Data directory: {_config.DataDirectory}");
+                Log($"Depth: {_config.Depth}");
+                Log($"JSON formatting: {_config.JsonFormatting}");
+                Log($"Max pages: {_config.MaxPages}");
+                Log($"Save to disk: {_config.SaveToDisk}");
+                Log($"Format paths: {_config.FormatPaths}");
+                Log($"Parallel downloads: {_config.ParallelDownloads}");
                 Log("Starting..." + Environment.NewLine);
             }
 
-            Log($"Downloading service index: {_serviceIndexUrl}");
-            var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_serviceIndexUrl);
-            if (_depth == DownloadDepth.ServiceIndex)
+            Log($"Downloading service index: {_config.ServiceIndexUrl}");
+            var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_config.ServiceIndexUrl);
+            if (_config.Depth == DownloadDepth.ServiceIndex)
             {
                 return;
             }
@@ -68,14 +49,14 @@ namespace Knapcode.CatalogDownloader
             var catalogResource = serviceIndex.Value.Resources.SingleOrDefault(x => x.Type == catalogResourceType);
             if (catalogResource == null)
             {
-                throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_serviceIndexUrl}'.");
+                throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_config.ServiceIndexUrl}'.");
             }
 
             var catalogIndexUrl = catalogResource.Url;
             Log($"Downloading catalog index: {catalogIndexUrl}");
 
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
-            if (_depth == DownloadDepth.CatalogIndex)
+            if (_config.Depth == DownloadDepth.CatalogIndex)
             {
                 return;
             }
@@ -83,7 +64,7 @@ namespace Knapcode.CatalogDownloader
             var cursor = ReadCursor(catalogIndex.Path);
 
             var pageItems = GetItems(catalogIndex.Value, cursor);
-            if (_verbose)
+            if (_config.Verbose)
             {
                 Log($"Found {pageItems.Count} pages with new data.");
             }
@@ -95,14 +76,14 @@ namespace Knapcode.CatalogDownloader
                 Log($"Downloading catalog page: {pageItem.Url}");
                 var page = await DownloadAndParseAsync<CatalogIndex>(pageItem.Url);
 
-                if (_depth == DownloadDepth.CatalogPage)
+                if (_config.Depth == DownloadDepth.CatalogPage)
                 {
                     WriteCursor(catalogIndex.Path, pageItem.CommitTimestamp);
                 }
                 else
                 {
                     var leafItems = GetItems(page.Value, cursor);
-                    if (_verbose)
+                    if (_config.Verbose)
                     {
                         Log($"Found {leafItems.Count} new leaves in this page.");
                     }
@@ -119,7 +100,7 @@ namespace Knapcode.CatalogDownloader
                             var work = new ConcurrentQueue<CatalogItem>(leafItems);
 
                             var tasks = Enumerable
-                                .Range(0, _parallelDownloads)
+                                .Range(0, _config.ParallelDownloads)
                                 .Select(async i =>
                                 {
                                     while (work.TryDequeue(out var leafItem))
@@ -142,7 +123,7 @@ namespace Knapcode.CatalogDownloader
                 }
 
                 completedPages++;
-                if (_maxPages.HasValue && completedPages >= _maxPages.Value)
+                if (_config.MaxPages.HasValue && completedPages >= _config.MaxPages.Value)
                 {
                     _logDepth = 0;
                     Log($"Completed {completedPages} pages. Terminating.");
@@ -163,7 +144,8 @@ namespace Knapcode.CatalogDownloader
             CatalogItem leafItem)
         {
             Log($"Downloading catalog leaf: {leafItem.Url}");
-            await DownloadAsync(leafItem.Url);
+            var destPath = GetDestinationPath(leafItem.Url);
+            await SaveToDiskAsync(leafItem.Url, destPath);
 
             lock (commitTimestampCount)
             {
@@ -196,7 +178,7 @@ namespace Knapcode.CatalogDownloader
 
         DateTimeOffset ReadCursor(string catalogIndexPath)
         {
-            var cursorPath = GetCursorPath(catalogIndexPath, _depth);
+            var cursorPath = GetCursorPath(catalogIndexPath, _config.Depth);
 
             if (!File.Exists(cursorPath))
             {
@@ -204,9 +186,9 @@ namespace Knapcode.CatalogDownloader
             }
 
             var cursor = JsonFileHelper.ReadJson<DateTimeOffset>(cursorPath);
-            if (_verbose)
+            if (_config.Verbose)
             {
-                Log($"Read {_depth} cursor: {cursor:O}");
+                Log($"Read {_config.Depth} cursor: {cursor:O}");
             }
 
             return cursor;
@@ -220,18 +202,18 @@ namespace Knapcode.CatalogDownloader
 
         void WriteCursor(string catalogIndexPath, DateTimeOffset cursor)
         {
-            var cursorPath = GetCursorPath(catalogIndexPath, _depth);
+            var cursorPath = GetCursorPath(catalogIndexPath, _config.Depth);
             var cursorDir = Path.GetDirectoryName(cursorPath);
             Directory.CreateDirectory(cursorDir);
             JsonFileHelper.WriteJson(cursorPath, cursor);
 
-            if (_verbose)
+            if (_config.Verbose)
             {
-                Log($"Wrote {_depth} cursor: {cursor:O}");
+                Log($"Wrote {_config.Depth} cursor: {cursor:O}");
             }
         }
 
-        async Task<string> DownloadAsync(string url)
+        private string GetDestinationPath(string url)
         {
             var uri = new Uri(url);
             if (uri.Scheme != "https" || !uri.IsDefaultPort)
@@ -252,7 +234,7 @@ namespace Knapcode.CatalogDownloader
 
             var pathFormatter = new PathFormatter(path);
 
-            if (_formatPaths)
+            if (_config.FormatPaths)
             {
                 pathFormatter.FormatPagePath();
                 pathFormatter.FormatLeafPath();
@@ -260,16 +242,21 @@ namespace Knapcode.CatalogDownloader
 
             path = pathFormatter.Path;
 
-            var hostDir = Path.GetFullPath(Path.Combine(_dataDir, uri.Host));
+            var hostDir = Path.GetFullPath(Path.Combine(_config.DataDirectory, uri.Host));
             var destPath = Path.GetFullPath(Path.Combine(hostDir, path));
 
+            return destPath;
+        }
+
+        async Task<string> SaveToDiskAsync(string url, string destPath)
+        {
             var destDir = Path.GetDirectoryName(destPath);
             Directory.CreateDirectory(destDir);
 
-            await DownloadWithRetryAsync(url, destPath);
+            await SaveToDiskWithRetryAsync(url, destPath);
 
-            var rewrite = JsonFileHelper.RewriteJson(destPath, _jsonFormatting);
-            if (_verbose && rewrite)
+            var rewrite = JsonFileHelper.RewriteJson(destPath, _config.JsonFormatting);
+            if (_config.Verbose && rewrite)
             {
                 Log($"The JSON at path {destPath} was rewritten.");
             }
@@ -277,7 +264,7 @@ namespace Knapcode.CatalogDownloader
             return destPath;
         }
 
-        async Task DownloadWithRetryAsync(string url, string destPath)
+        async Task<T> DownloadWithRetryAsync<T>(string url, Func<Stream, Task<T>> processAsync)
         {
             const int maxAttemts = 3;
             for (var i = 0; i < maxAttemts; i++)
@@ -285,21 +272,50 @@ namespace Knapcode.CatalogDownloader
                 try
                 {
                     using var responseStream = await _httpClient.GetStreamAsync(url);
-                    using var fileStream = new FileStream(destPath, FileMode.Create);
-                    await responseStream.CopyToAsync(fileStream);
-                    break;
+                    return await processAsync(responseStream);
                 }
                 catch (Exception ex) when (i < maxAttemts - 1)
                 {
-                    Log($"Retrying download of {url} to {destPath}. Exception:{Environment.NewLine}{ex}");
+                    Log($"Retrying download of {url}. Exception:{Environment.NewLine}{ex}");
                 }
             }
+
+            throw new InvalidOperationException();
+        }
+
+        async Task SaveToDiskWithRetryAsync(string url, string destPath)
+        {
+            await DownloadWithRetryAsync(
+                url,
+                async responseStream =>
+                {
+                    using var fileStream = new FileStream(destPath, FileMode.Create);
+                    await responseStream.CopyToAsync(fileStream);
+                    return true;
+                });
+        }
+
+        async Task<T> ParseWithRetryAsync<T>(string url)
+        {
+            return await DownloadWithRetryAsync(
+                url,
+                responseStream => Task.FromResult(JsonFileHelper.ReadJson<T>(responseStream)));
         }
 
         async Task<ParsedFile<T>> DownloadAndParseAsync<T>(string url)
         {
-            var destPath = await DownloadAsync(url);
-            var value = JsonFileHelper.ReadJson<T>(destPath);
+            var destPath = GetDestinationPath(url);
+            T value;
+            if (_config.SaveToDisk)
+            {
+                await SaveToDiskAsync(url, destPath);
+                value = JsonFileHelper.ReadJson<T>(destPath);
+            }
+            else
+            {
+                value = await ParseWithRetryAsync<T>(url);
+            }
+
             return new ParsedFile<T>(destPath, value);
         }
     }

@@ -25,6 +25,11 @@ namespace Knapcode.CatalogDownloader
         public static T ReadJson<T>(string path, DateParseHandling dateParseHandling = DateParseHandling.DateTimeOffset)
         {
             using var stream = File.OpenRead(path);
+            return ReadJson<T>(stream, dateParseHandling);
+        }
+
+        public static T ReadJson<T>(Stream stream, DateParseHandling dateParseHandling = DateParseHandling.DateTimeOffset)
+        {
             using var textReader = new StreamReader(stream);
             using var jsonReader = new JsonTextReader(textReader);
             var serializer = GetJsonSerializer(dateParseHandling);
