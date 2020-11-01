@@ -90,6 +90,7 @@ namespace Knapcode.CatalogDownloader
 
             await Program.Main(
                 dataDir: _dataDir,
+                jsonFormatting: JsonFormatting.Pretty,
                 maxCommits: 1,
                 parallelDownloads: 4,
                 verbose: true);
