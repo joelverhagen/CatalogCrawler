@@ -16,7 +16,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2C292630-E
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CatalogDownloader.Test", "test\CatalogDownloader.Test\CatalogDownloader.Test.csproj", "{D334BBD1-3C47-407B-8A01-223F4D50C7F5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogReports", "src\CatalogReports\CatalogReports.csproj", "{58E1F4C2-3631-419F-8AC8-509872C2E84D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CatalogReports", "src\CatalogReports\CatalogReports.csproj", "{58E1F4C2-3631-419F-8AC8-509872C2E84D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CatalogDownloader.Logic", "src\CatalogDownloader.Logic\CatalogDownloader.Logic.csproj", "{19446922-B800-48AF-9192-850359E7EE19}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +38,10 @@ Global
 		{58E1F4C2-3631-419F-8AC8-509872C2E84D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58E1F4C2-3631-419F-8AC8-509872C2E84D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58E1F4C2-3631-419F-8AC8-509872C2E84D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19446922-B800-48AF-9192-850359E7EE19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19446922-B800-48AF-9192-850359E7EE19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19446922-B800-48AF-9192-850359E7EE19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19446922-B800-48AF-9192-850359E7EE19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,6 +50,7 @@ Global
 		{87A7FD72-73B6-42B4-9535-F9E5F90C0668} = {02CE59F4-6187-4A15-BE24-FFEE3A19948B}
 		{D334BBD1-3C47-407B-8A01-223F4D50C7F5} = {2C292630-E534-4FDB-90A2-558FDD748E04}
 		{58E1F4C2-3631-419F-8AC8-509872C2E84D} = {02CE59F4-6187-4A15-BE24-FFEE3A19948B}
+		{19446922-B800-48AF-9192-850359E7EE19} = {02CE59F4-6187-4A15-BE24-FFEE3A19948B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {122A7AD1-03AE-4CEC-A0AB-848C6A34B8C7}
