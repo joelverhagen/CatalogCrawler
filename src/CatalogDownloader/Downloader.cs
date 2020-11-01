@@ -74,7 +74,11 @@ namespace Knapcode.CatalogDownloader
                 throw new InvalidOperationException($"No {catalogResourceType} resource was found in '{_config.ServiceIndexUrl}'.");
             }
 
-            var catalogIndexUrl = catalogResource.Url;
+            await ProcessCatalogAsync(catalogResource.Url);
+        }
+
+        async Task ProcessCatalogAsync(string catalogIndexUrl)
+        {
             Log($"Downloading catalog index: {catalogIndexUrl}");
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
 
@@ -98,7 +102,7 @@ namespace Knapcode.CatalogDownloader
             }
 
             await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
-            
+
             if (_config.Depth == DownloadDepth.CatalogIndex)
             {
                 UpdateCursorFromItems<CatalogIndex, CatalogPageItem>(cursor, catalogIndex);
@@ -106,7 +110,6 @@ namespace Knapcode.CatalogDownloader
             }
 
             _logDepth++;
-            var completedPages = 0;
             var completedCommits = 0;
             foreach (var pageItem in catalogIndex.Value.Items)
             {
@@ -142,7 +145,7 @@ namespace Knapcode.CatalogDownloader
                 }
 
                 await _visitor.OnCatalogPageAsync(page.Value);
-                
+
                 if (_config.Depth == DownloadDepth.CatalogPage)
                 {
                     UpdateCursorFromItems<CatalogPage, CatalogLeafItem>(cursor, page);
@@ -180,7 +183,6 @@ namespace Knapcode.CatalogDownloader
                     }
                 }
 
-                completedPages++;
                 completedCommits += commitCount;
 
                 if (_config.MaxCommits.HasValue && completedCommits >= _config.MaxCommits.Value)
@@ -191,7 +193,7 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        private static void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
+        static void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
             where TItem : BaseCatalogItem
             where TList : BaseCatalogList<TItem>
         {
@@ -246,7 +248,7 @@ namespace Knapcode.CatalogDownloader
                 .ToList();
         }
 
-        private string GetDestinationPath(string url)
+        string GetDestinationPath(string url)
         {
             var uri = new Uri(url);
             if (uri.Scheme != "https" || !uri.IsDefaultPort)
