@@ -6,6 +6,11 @@ namespace Knapcode.CatalogDownloader
 {
     class Program
     {
+        /// <summary>
+        /// Just used for testing.
+        /// </summary>
+        public static IDepthLogger Logger { get; set; }
+
         /// <summary>A tool to download all NuGet catalog documents to a local directory.</summary>
         /// <param name="serviceIndexUrl">The NuGet V3 service index URL.</param>
         /// <param name="dataDir">The directory for storing catalog documents.</param>
@@ -29,6 +34,14 @@ namespace Knapcode.CatalogDownloader
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", GetUserAgent());
+
+            var depthLogger = Logger;
+            if (depthLogger == null)
+            {
+                var consoleLogger = new ConsoleLogger(verbose);
+                depthLogger = new DepthLogger(consoleLogger);
+            }
+
             await ExecuteAsync(
                 httpClient,
                 serviceIndexUrl,
@@ -39,7 +52,7 @@ namespace Knapcode.CatalogDownloader
                 maxCommits,
                 formatPaths,
                 parallelDownloads,
-                verbose);
+                depthLogger);
         }
 
         public static async Task ExecuteAsync(
@@ -52,7 +65,7 @@ namespace Knapcode.CatalogDownloader
             int? maxCommits,
             bool formatPaths,
             int parallelDownloads,
-            bool verbose)
+            IDepthLogger logger)
         {
             var downloader = new Downloader(
                 httpClient,
@@ -68,9 +81,9 @@ namespace Knapcode.CatalogDownloader
                     SaveToDisk = true,
                     FormatPaths = formatPaths,
                     ParallelDownloads = parallelDownloads,
-                    Verbose = verbose,
                 },
-                NullVisitor.Instance);
+                NullVisitor.Instance,
+                logger);
 
             await downloader.DownloadAsync();
         }

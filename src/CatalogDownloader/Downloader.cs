@@ -13,41 +13,40 @@ namespace Knapcode.CatalogDownloader
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
         private readonly IVisitor _visitor;
+        private readonly IDepthLogger _logger;
         private int _logDepth = 0;
 
         public Downloader(
             HttpClient httpClient,
             DownloaderConfiguration config,
-            IVisitor visitor)
+            IVisitor visitor,
+            IDepthLogger logger)
         {
             _httpClient = httpClient;
             _config = config;
             _visitor = visitor;
+            _logger = logger;
         }
 
         public async Task DownloadAsync()
         {
             _logDepth = 0;
 
-            if (_config.Verbose)
-            {
-                Log("Configuration:");
-                _logDepth++;
-                Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
-                Log($"Cursor suffix: {_config.CursurSuffix}");
-                Log($"Service index: {_config.ServiceIndexUrl}");
-                Log($"Data directory: {_config.DataDirectory}");
-                Log($"Depth: {_config.Depth}");
-                Log($"JSON formatting: {_config.JsonFormatting}");
-                Log($"Max pages: {_config.MaxPages}");
-                Log($"Max commits: {_config.MaxCommits}");
-                Log($"Save to disk: {_config.SaveToDisk}");
-                Log($"Format paths: {_config.FormatPaths}");
-                Log($"Parallel downloads: {_config.ParallelDownloads}");
-                Log($"Verbose: {_config.Verbose}");
-                _logDepth--;
-                Log("Starting..." + Environment.NewLine);
-            }
+            LogVerbose("Configuration:");
+            _logDepth++;
+            LogVerbose("User-Agent: {UserAgent}", _httpClient.DefaultRequestHeaders.UserAgent);
+            LogVerbose("Cursor suffix: {CursorSuffix}", _config.CursurSuffix);
+            LogVerbose("Service index: {ServiceIndexUrl}", _config.ServiceIndexUrl);
+            LogVerbose("Data directory: {DataDirectory}", _config.DataDirectory);
+            LogVerbose("Depth: {Depth}", _config.Depth);
+            LogVerbose("JSON formatting: {JsonFormatting}", _config.JsonFormatting);
+            LogVerbose("Max pages: {MaxPages}", _config.MaxPages);
+            LogVerbose("Max commits: {MaxCommits}", _config.MaxCommits);
+            LogVerbose("Save to disk: {SaveToDisk}", _config.SaveToDisk);
+            LogVerbose("Format paths: {FormatPaths}", _config.FormatPaths);
+            LogVerbose("Parallel downloads: {ParallelDownloads}", _config.ParallelDownloads);
+            _logDepth--;
+            LogVerbose("Starting..." + Environment.NewLine);
 
             if (_config.MaxCommits.HasValue && _config.Depth < DownloadDepth.CatalogPage)
             {
@@ -59,7 +58,7 @@ namespace Knapcode.CatalogDownloader
                 throw new InvalidOperationException($"The download depth must be at least {DownloadDepth.CatalogIndex} when setting a maximum number of pages.");
             }
 
-            Log($"Downloading service index: {_config.ServiceIndexUrl}");
+            LogInformation($"Downloading service index: {_config.ServiceIndexUrl}");
             var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_config.ServiceIndexUrl);
             await _visitor.OnServiceIndexAsync(serviceIndex.Value);
             if (_config.Depth == DownloadDepth.ServiceIndex)
@@ -79,16 +78,13 @@ namespace Knapcode.CatalogDownloader
 
         async Task ProcessCatalogAsync(string catalogIndexUrl)
         {
-            Log($"Downloading catalog index: {catalogIndexUrl}");
+            LogInformation("Downloading catalog index: {Url}", catalogIndexUrl);
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
 
             var cursor = new Cursor(this, catalogIndex.Path);
             cursor.Read();
             FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor, DateTimeOffset.MaxValue);
-            if (_config.Verbose)
-            {
-                Log($"Found {catalogIndex.Value.Items.Count} pages with new data.");
-            }
+            LogVerbose("Found {Count} pages with new data.", catalogIndex.Value.Items.Count);
 
             if (_config.MaxPages.HasValue
                 && _config.MaxPages.Value < catalogIndex.Value.Items.Count)
@@ -98,7 +94,7 @@ namespace Knapcode.CatalogDownloader
                     .Items
                     .Take(_config.MaxPages.Value)
                     .ToList();
-                Log($"Only processing {catalogIndex.Value.Items.Count} new pages, due to max pages limit.");
+                LogInformation("Only processing {Count} new pages, due to max pages limit.", catalogIndex.Value.Items.Count);
             }
 
             await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
@@ -113,14 +109,11 @@ namespace Knapcode.CatalogDownloader
             var completedCommits = 0;
             foreach (var pageItem in catalogIndex.Value.Items)
             {
-                Log($"Downloading catalog page: {pageItem.Url}");
+                LogInformation("Downloading catalog page: {Url}", pageItem.Url);
                 var page = await DownloadAndParseAsync<CatalogPage>(pageItem.Url);
 
                 FilterItems<CatalogPage, CatalogLeafItem>(page, cursor, pageItem.CommitTimestamp);
-                if (_config.Verbose)
-                {
-                    Log($"Found {page.Value.Items.Count} new leaves in this page.");
-                }
+                LogVerbose("Found {Count} new leaves in this page.", page.Value.Items.Count);
 
                 var pageCommits = page
                     .Value
@@ -137,10 +130,7 @@ namespace Knapcode.CatalogDownloader
                     {
                         commitCount = remainingCommits;
                         FilterItems<CatalogPage, CatalogLeafItem>(page, cursor, pageCommits[remainingCommits - 1]);
-                        if (_config.Verbose)
-                        {
-                            Log($"Only processing {page.Value.Items.Count} new leaves, due to max commits limit.");
-                        }
+                        LogVerbose("Only processing {Count} new leaves, due to max commits limit.", page.Value.Items.Count);
                     }
                 }
 
@@ -187,7 +177,7 @@ namespace Knapcode.CatalogDownloader
 
                 if (_config.MaxCommits.HasValue && completedCommits >= _config.MaxCommits.Value)
                 {
-                    Log($"Completed {completedCommits} commits. Terminating.");
+                    LogInformation("Completed {CompletedCommits} commits. Terminating.", completedCommits);
                     return;
                 }
             }
@@ -203,9 +193,14 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        void Log(string message)
+        void LogInformation(string message, params object[] data)
         {
-            Console.WriteLine(new string(' ', _logDepth * 2) + message);
+            _logger.LogInformation(_logDepth, message, data);
+        }
+
+        void LogVerbose(string message, params object[] data)
+        {
+            _logger.LogDebug(_logDepth, message, data);
         }
 
         async Task DownloadLeafAsync(
@@ -213,7 +208,7 @@ namespace Knapcode.CatalogDownloader
             Dictionary<DateTimeOffset, int> commitTimestampCount,
             BaseCatalogItem leafItem)
         {
-            Log($"Downloading catalog leaf: {leafItem.Url}");
+            LogInformation("Downloading catalog leaf: {Url}", leafItem.Url);
             var destPath = GetDestinationPath(leafItem.Url);
             await SaveToDiskAsync(leafItem.Url, destPath);
 
@@ -291,9 +286,9 @@ namespace Knapcode.CatalogDownloader
             await SaveToDiskWithRetryAsync(url, destPath);
 
             var rewrite = JsonFileHelper.RewriteJson(destPath, _config.JsonFormatting);
-            if (_config.Verbose && rewrite)
+            if (rewrite)
             {
-                Log($"The JSON at path {destPath} was rewritten.");
+                LogVerbose("The JSON at path {DestinationPath} was rewritten.", destPath);
             }
 
             return destPath;
@@ -311,7 +306,7 @@ namespace Knapcode.CatalogDownloader
                 }
                 catch (Exception ex) when (i < maxAttemts - 1)
                 {
-                    Log($"Retrying download of {url}. Exception:{Environment.NewLine}{ex}");
+                    LogInformation("Retrying download of {Url}. Exception:" + Environment.NewLine + "{Exception}", url, ex);
                 }
             }
 
@@ -373,18 +368,12 @@ namespace Knapcode.CatalogDownloader
                 if (!File.Exists(_cursorPath))
                 {
                     Value = DateTimeOffset.MinValue;
-                    if (_downloader._config.Verbose)
-                    {
-                        _downloader.Log($"Cursor {_downloader._config.CursurSuffix} does not exist. Using minimum value: {Value:O}");
-                    }
+                    _downloader.LogVerbose("Cursor {CursurSuffix} does not exist. Using minimum value: {Value:O}", _downloader._config.CursurSuffix, Value);
                 }
                 else
                 {
                     Value = JsonFileHelper.ReadJson<DateTimeOffset>(_cursorPath);
-                    if (_downloader._config.Verbose)
-                    {
-                        _downloader.Log($"Read {_downloader._config.CursurSuffix} cursor: {Value:O}");
-                    }
+                    _downloader.LogVerbose("Read {CursorSuffix} cursor: {Value:O}", _downloader._config.CursurSuffix, Value);
                 }
             }
 
@@ -394,10 +383,7 @@ namespace Knapcode.CatalogDownloader
                 Directory.CreateDirectory(cursorDir);
                 JsonFileHelper.WriteJson(_cursorPath, value);
                 Value = value;
-                if (_downloader._config.Verbose)
-                {
-                    _downloader.Log($"Wrote {_downloader._config.CursurSuffix} cursor: {Value:O}");
-                }
+                _downloader.LogVerbose("Wrote {CursurSuffix} cursor: {Value:O}", _downloader._config.CursurSuffix, Value);
             }
         }
     }

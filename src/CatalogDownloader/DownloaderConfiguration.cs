@@ -12,6 +12,5 @@
         public bool SaveToDisk { get; set; }
         public bool FormatPaths { get; set; }
         public int ParallelDownloads { get; set; }
-        public bool Verbose { get; set; }
     }
 }

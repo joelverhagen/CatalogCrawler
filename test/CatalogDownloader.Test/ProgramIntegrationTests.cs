@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Knapcode.CatalogDownloader
 {
@@ -23,6 +24,7 @@ namespace Knapcode.CatalogDownloader
         private const string Step4 = "TestData/Step4";
         private const string NuGetOrg = "TestData/api.nuget.org";
         private const string CursorFormat = "{0}/.meta/cursor.download.{1}.json";
+        private readonly ITestOutputHelper _output;
         private readonly DefaultWebApplicationFactory<StaticFilesStartup> _factory;
         private readonly TestDirectory _testDir;
         private readonly string _dataDir;
@@ -32,18 +34,23 @@ namespace Knapcode.CatalogDownloader
         private readonly ConcurrentQueue<string> _paths;
         private readonly HttpClient _httpClient;
         private DownloadDepth _depth;
+        private readonly DepthLogger _logger;
         private int? _maxPages;
         private int? _maxCommits;
         private int _expectedRequestCount;
 
-        public ProgramIntegrationTests(DefaultWebApplicationFactory<StaticFilesStartup> factory)
+        public ProgramIntegrationTests(
+            ITestOutputHelper output,
+            DefaultWebApplicationFactory<StaticFilesStartup> factory)
         {
+            _output = output;
             _factory = factory;
             _testDir = new TestDirectory();
             _dataDir = Path.Combine(_testDir, "data");
             _webRoot = Path.Combine(_testDir, "wwwroot");
             _host = "localhost";
             _depth = DownloadDepth.CatalogLeaf;
+            _logger = new DepthLogger(new TestLogger(output));
 
             _builder = _factory.WithWebHostBuilder(b => b
                 .ConfigureLogging(b => b.SetMinimumLevel(LogLevel.Error))
@@ -79,6 +86,7 @@ namespace Knapcode.CatalogDownloader
         public async Task VerifyAgainstNuGetOrg()
         {
             _host = "api.nuget.org";
+            Program.Logger = _logger;
 
             await Program.Main(
                 dataDir: _dataDir,
@@ -361,7 +369,7 @@ namespace Knapcode.CatalogDownloader
                 maxCommits: _maxCommits,
                 formatPaths: true,
                 parallelDownloads: 1,
-                verbose: true);
+                logger: _logger);
         }
 
         private void AssertCursor(string dir, string value)
