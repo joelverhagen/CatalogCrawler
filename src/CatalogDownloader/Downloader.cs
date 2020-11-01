@@ -97,8 +97,10 @@ namespace Knapcode.CatalogDownloader
             LogInformation("Downloading catalog index: {Url}", catalogIndexUrl);
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
 
-            var cursor = new Cursor(this, catalogIndex.Path);
-            cursor.Read();
+            var catalogIndexDir = Path.GetDirectoryName(catalogIndex.Path);
+            var cursorPath = Path.Combine(catalogIndexDir, ".meta", $"cursor.{_config.CursurSuffix}.json");
+            var cursor = new Cursor(cursorPath, _config.DefaultCursorValue, _logger);
+            cursor.Read(_logDepth);
             FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor, DateTimeOffset.MaxValue);
             LogVerbose("Found {Count} pages with new data.", catalogIndex.Value.Items.Count);
 
@@ -197,13 +199,13 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        static void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
+        void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
             where TItem : BaseCatalogItem
             where TList : BaseCatalogList<TItem>
         {
             if (parsedFile.Value.Items.Any())
             {
-                cursor.Write(parsedFile.Value.Items.Max(x => x.CommitTimestamp));
+                cursor.Write(_logDepth, parsedFile.Value.Items.Max(x => x.CommitTimestamp));
             }
         }
 
@@ -237,7 +239,7 @@ namespace Knapcode.CatalogDownloader
                     // it's the lowest commit timestamp of all pending leaves.
                     if (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key))
                     {
-                        cursor.Write(leafItem.CommitTimestamp);
+                        cursor.Write(_logDepth, leafItem.CommitTimestamp);
                     }
                 }
             }
@@ -365,44 +367,6 @@ namespace Knapcode.CatalogDownloader
             }
 
             return new ParsedFile<T>(destPath, value);
-        }
-
-        private class Cursor
-        {
-            private readonly Downloader _downloader;
-            private readonly string _cursorPath;
-
-            public DateTimeOffset Value { get; private set; }
-
-            public Cursor(Downloader downloader, string catalogIndexPath)
-            {
-                _downloader = downloader;
-                var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-                _cursorPath = Path.Combine(catalogIndexDir, ".meta", $"cursor.{_downloader._config.CursurSuffix}.json");
-            }
-
-            public void Read()
-            {
-                if (!File.Exists(_cursorPath))
-                {
-                    Value = _downloader._config.DefaultCursorValue;
-                    _downloader.LogVerbose("Cursor {CursurSuffix} does not exist. Using minimum value: {Value:O}", _downloader._config.CursurSuffix, Value);
-                }
-                else
-                {
-                    Value = JsonFileHelper.ReadJson<DateTimeOffset>(_cursorPath);
-                    _downloader.LogVerbose("Read {CursorSuffix} cursor: {Value:O}", _downloader._config.CursurSuffix, Value);
-                }
-            }
-
-            public void Write(DateTimeOffset value)
-            {
-                var cursorDir = Path.GetDirectoryName(_cursorPath);
-                Directory.CreateDirectory(cursorDir);
-                JsonFileHelper.WriteJson(_cursorPath, value);
-                Value = value;
-                _downloader.LogVerbose("Wrote {CursurSuffix} cursor: {Value:O}", _downloader._config.CursurSuffix, Value);
-            }
         }
     }
 }
