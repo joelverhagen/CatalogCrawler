@@ -3,47 +3,41 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    
-    <AssemblyName>Knapcode.CatalogDownloader</AssemblyName>
+
+    <AssemblyName>Knapcode.CatalogReports</AssemblyName>
     <RootNamespace>$(AssemblyName)</RootNamespace>
-    
+
     <Version Condition="$(CIRunId) == ''">0.0.3-beta</Version>
     <Version Condition="$(CIRunId) != ''">0.0.3-beta.ci.$(CIRunId)</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Description>A tool to download all NuGet catalog documents to a local directory.</Description>
+    <Description>A tool to incrementally update reports built off of the NuGet catalog.</Description>
     <Authors>Joel Verhagen</Authors>
-    
+
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>$(AssemblyName)</ToolCommandName>
-    
+
     <PackageOutputPath>../../artifacts</PackageOutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    
+
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
-    
+
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
+    <PackageReference Include="CsvHelper" Version="15.0.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20371.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>$(AssemblyName).Test</_Parameter1>
-    </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>Knapcode.CatalogReports</_Parameter1>
-    </AssemblyAttribute>
+    <ProjectReference Include="..\CatalogDownloader\CatalogDownloader.csproj" />
   </ItemGroup>
 
 </Project>

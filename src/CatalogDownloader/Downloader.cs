@@ -68,7 +68,6 @@ namespace Knapcode.CatalogDownloader
 
             LogInformation($"Downloading service index: {_config.ServiceIndexUrl}");
             var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_config.ServiceIndexUrl);
-            await _visitor.OnServiceIndexAsync(serviceIndex.Value);
             if (_config.Depth == DownloadDepth.ServiceIndex)
             {
                 return;
@@ -113,8 +112,6 @@ namespace Knapcode.CatalogDownloader
                     .ToList();
                 LogInformation("Only processing {Count} new pages, due to max pages limit.", catalogIndex.Value.Items.Count);
             }
-
-            await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
 
             if (_config.Depth == DownloadDepth.CatalogIndex)
             {

@@ -6,8 +6,6 @@ namespace Knapcode.CatalogDownloader
     {
         public static NullVisitor Instance { get; } = new NullVisitor();
 
-        public Task OnServiceIndexAsync(ServiceIndex serviceIndex) => Task.CompletedTask;
-        public Task OnCatalogIndexAsync(CatalogIndex catalogIndex) => Task.CompletedTask;
-        public Task OnCatalogPageAsync(CatalogPage catalogIndex) => Task.CompletedTask;
+        public Task OnCatalogPageAsync(CatalogPage catalogPage) => Task.CompletedTask;
     }
 }
