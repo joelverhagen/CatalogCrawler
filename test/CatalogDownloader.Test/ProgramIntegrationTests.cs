@@ -81,7 +81,7 @@ namespace Knapcode.CatalogDownloader
             await Program.Main(
                 dataDir: _dataDir,
                 maxCommits: 1,
-                parallelDownloads: 1,
+                parallelDownloads: 4,
                 verbose: true);
 
             AssertFileExists(GetFullFilePath("v3/index.json"));
