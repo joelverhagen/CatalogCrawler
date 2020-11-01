@@ -7,7 +7,8 @@
     <AssemblyName>Knapcode.CatalogDownloader</AssemblyName>
     <RootNamespace>$(AssemblyName)</RootNamespace>
     
-    <Version>0.0.2-beta</Version>
+    <Version Condition="$(CIRunId) == ''">0.0.2-beta</Version>
+    <Version Condition="$(CIRunId) != ''">0.0.2-beta.ci.$(RunId)</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>A tool to download all NuGet catalog documents to a local directory.</Description>
     <Authors>Joel Verhagen</Authors>
