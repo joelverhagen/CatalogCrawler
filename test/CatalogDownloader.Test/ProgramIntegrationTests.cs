@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -45,6 +46,7 @@ namespace Knapcode.CatalogDownloader
             _depth = DownloadDepth.CatalogLeaf;
 
             _builder = _factory.WithWebHostBuilder(b => b
+                .ConfigureLogging(b => b.SetMinimumLevel(LogLevel.Error))
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseWebRoot(_webRoot));
             _paths = _builder.Services.GetRequiredService<ConcurrentQueue<string>>();
