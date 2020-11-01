@@ -59,51 +59,67 @@ namespace Knapcode.CatalogDownloader
 
             var catalogIndexUrl = catalogResource.Url;
             Log($"Downloading catalog index: {catalogIndexUrl}");
-
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
-            await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
-            if (_config.Depth == DownloadDepth.CatalogIndex)
-            {
-                return;
-            }
 
-            var cursor = ReadCursor(catalogIndex.Path);
-
-            var pageItems = GetItems(catalogIndex.Value, cursor);
+            var cursor = new Cursor(this, catalogIndex.Path);
+            cursor.Read();
+            FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor);
             if (_config.Verbose)
             {
-                Log($"Found {pageItems.Count} pages with new data.");
+                Log($"Found {catalogIndex.Value.Items.Count} pages with new data.");
+            }
+
+            await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
+            
+            if (_config.Depth == DownloadDepth.CatalogIndex)
+            {
+                if (catalogIndex.Value.Items.Any())
+                {
+                    cursor.Write(catalogIndex.Value.Items.Max(x => x.CommitTimestamp));
+                }
+
+                return;
             }
 
             _logDepth++;
             var completedPages = 0;
-            foreach (var pageItem in pageItems)
+            foreach (var pageItem in catalogIndex.Value.Items)
             {
                 Log($"Downloading catalog page: {pageItem.Url}");
                 var page = await DownloadAndParseAsync<CatalogPage>(pageItem.Url);
+
+                FilterItems<CatalogPage, CatalogLeafItem>(page, cursor);
+                if (_config.Verbose)
+                {
+                    Log($"Found {page.Value.Items.Count} new leaves in this page.");
+                }
+
                 await _visitor.OnCatalogPageAsync(page.Value);
+                
                 if (_config.Depth == DownloadDepth.CatalogPage)
                 {
-                    WriteCursor(catalogIndex.Path, pageItem.CommitTimestamp);
+                    if (page.Value.Items.Any())
+                    {
+                        cursor.Write(new[]
+                        {
+                            pageItem.CommitTimestamp,
+                            page.Value.Items.Max(x => x.CommitTimestamp)
+                        }.Min());
+                    }
                 }
                 else
                 {
-                    var leafItems = GetItems(page.Value, cursor);
-                    if (_config.Verbose)
-                    {
-                        Log($"Found {leafItems.Count} new leaves in this page.");
-                    }
-
                     _logDepth++;
                     try
                     {
-
-                        if (leafItems.Any())
+                        if (page.Value.Items.Any())
                         {
-                            var commitTimestampCount = leafItems
+                            var commitTimestampCount = page
+                                .Value
+                                .Items
                                 .GroupBy(x => x.CommitTimestamp)
                                 .ToDictionary(x => x.Key, x => x.Count());
-                            var work = new ConcurrentQueue<BaseCatalogItem>(leafItems);
+                            var work = new ConcurrentQueue<BaseCatalogItem>(page.Value.Items);
 
                             var tasks = Enumerable
                                 .Range(0, _config.ParallelDownloads)
@@ -112,10 +128,10 @@ namespace Knapcode.CatalogDownloader
                                     while (work.TryDequeue(out var leafItem))
                                     {
                                         await DownloadLeafAsync(
-                                            catalogIndex.Path,
                                             pageItem.CommitTimestamp,
                                             commitTimestampCount,
-                                            leafItem);
+                                            leafItem,
+                                            cursor);
                                     }
                                 })
                                 .ToList();
@@ -144,10 +160,10 @@ namespace Knapcode.CatalogDownloader
         }
 
         async Task DownloadLeafAsync(
-            string catalogIndexPath,
             DateTimeOffset pageItemCommitTimestamp,
             Dictionary<DateTimeOffset, int> commitTimestampCount,
-            BaseCatalogItem leafItem)
+            BaseCatalogItem leafItem,
+            Cursor cursor)
         {
             Log($"Downloading catalog leaf: {leafItem.Url}");
             var destPath = GetDestinationPath(leafItem.Url);
@@ -166,57 +182,23 @@ namespace Knapcode.CatalogDownloader
                     if (leafItem.CommitTimestamp <= pageItemCommitTimestamp
                         && (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key)))
                     {
-                        WriteCursor(catalogIndexPath, leafItem.CommitTimestamp);
+                        cursor.Write(leafItem.CommitTimestamp);
                     }
                 }
             }
         }
 
-        static List<T> GetItems<T>(BaseCatalogList<T> catalogList, DateTimeOffset cursor) where T : BaseCatalogItem
+        static void FilterItems<TList, TItem>(ParsedFile<TList> parsedFile, Cursor cursor)
+            where TItem : BaseCatalogItem
+            where TList : BaseCatalogList<TItem>
         {
-            return catalogList
+            parsedFile.Value.Items = parsedFile
+                .Value
                 .Items
-                .Where(x => x.CommitTimestamp > cursor)
+                .Where(x => x.CommitTimestamp > cursor.Value)
                 .OrderBy(x => x.CommitTimestamp)
                 .ThenBy(x => x.Url)
                 .ToList();
-        }
-
-        DateTimeOffset ReadCursor(string catalogIndexPath)
-        {
-            var cursorPath = GetCursorPath(catalogIndexPath);
-
-            if (!File.Exists(cursorPath))
-            {
-                return DateTimeOffset.MinValue;
-            }
-
-            var cursor = JsonFileHelper.ReadJson<DateTimeOffset>(cursorPath);
-            if (_config.Verbose)
-            {
-                Log($"Read {_config.Depth} cursor: {cursor:O}");
-            }
-
-            return cursor;
-        }
-
-        string GetCursorPath(string catalogIndexPath)
-        {
-            var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
-            return Path.Combine(catalogIndexDir, ".meta", $"cursor.{_config.CursurSuffix}.json");
-        }
-
-        void WriteCursor(string catalogIndexPath, DateTimeOffset cursor)
-        {
-            var cursorPath = GetCursorPath(catalogIndexPath);
-            var cursorDir = Path.GetDirectoryName(cursorPath);
-            Directory.CreateDirectory(cursorDir);
-            JsonFileHelper.WriteJson(cursorPath, cursor);
-
-            if (_config.Verbose)
-            {
-                Log($"Wrote {_config.Depth} cursor: {cursor:O}");
-            }
         }
 
         private string GetDestinationPath(string url)
@@ -323,6 +305,53 @@ namespace Knapcode.CatalogDownloader
             }
 
             return new ParsedFile<T>(destPath, value);
+        }
+
+        private class Cursor
+        {
+            private readonly Downloader _downloader;
+            private readonly string _cursorPath;
+
+            public DateTimeOffset Value { get; private set; }
+
+            public Cursor(Downloader downloader, string catalogIndexPath)
+            {
+                _downloader = downloader;
+                var catalogIndexDir = Path.GetDirectoryName(catalogIndexPath);
+                _cursorPath = Path.Combine(catalogIndexDir, ".meta", $"cursor.{_downloader._config.CursurSuffix}.json");
+            }
+
+            public void Read()
+            {
+                if (!File.Exists(_cursorPath))
+                {
+                    Value = DateTimeOffset.MinValue;
+                    if (_downloader._config.Verbose)
+                    {
+                        _downloader.Log($"Cursor {_downloader._config.CursurSuffix} does not exist. Using minimum value: {Value:O}");
+                    }
+                }
+                else
+                {
+                    Value = JsonFileHelper.ReadJson<DateTimeOffset>(_cursorPath);
+                    if (_downloader._config.Verbose)
+                    {
+                        _downloader.Log($"Read {_downloader._config.CursurSuffix} cursor: {Value:O}");
+                    }
+                }
+            }
+
+            public void Write(DateTimeOffset value)
+            {
+                var cursorDir = Path.GetDirectoryName(_cursorPath);
+                Directory.CreateDirectory(cursorDir);
+                JsonFileHelper.WriteJson(_cursorPath, value);
+                Value = value;
+                if (_downloader._config.Verbose)
+                {
+                    _downloader.Log($"Wrote {_downloader._config.CursurSuffix} cursor: {Value:O}");
+                }
+            }
         }
     }
 }

@@ -56,7 +56,7 @@ namespace Knapcode.CatalogDownloader
             _testDir.Dispose();
         }
 
-        [Fact]
+        [Fact(Skip = "Too slow.")]
         public async Task VerifyAgainstNuGetOrg()
         {
             await Program.Main(
@@ -211,7 +211,7 @@ namespace Knapcode.CatalogDownloader
         private void AssertCursor(string value)
         {
             var cursorPath = string.Format(CursorFormat, _depth);
-            if (_depth > DownloadDepth.CatalogIndex)
+            if (_depth > DownloadDepth.ServiceIndex)
             {
                 AssertFile(value, cursorPath);
             }
