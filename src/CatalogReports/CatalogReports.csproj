@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CatalogDownloader\CatalogDownloader.csproj" />
+    <ProjectReference Include="..\CatalogDownloader.Logic\CatalogDownloader.Logic.csproj" />
   </ItemGroup>
 
 </Project>
