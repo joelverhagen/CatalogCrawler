@@ -27,6 +27,8 @@ namespace Knapcode.CatalogDownloader
 
         public async Task DownloadAsync()
         {
+            _logDepth = 0;
+
             if (_config.Verbose)
             {
                 Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
@@ -63,7 +65,7 @@ namespace Knapcode.CatalogDownloader
 
             var cursor = new Cursor(this, catalogIndex.Path);
             cursor.Read();
-            FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor);
+            FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor, DateTimeOffset.MaxValue);
             if (_config.Verbose)
             {
                 Log($"Found {catalogIndex.Value.Items.Count} pages with new data.");
@@ -73,11 +75,7 @@ namespace Knapcode.CatalogDownloader
             
             if (_config.Depth == DownloadDepth.CatalogIndex)
             {
-                if (catalogIndex.Value.Items.Any())
-                {
-                    cursor.Write(catalogIndex.Value.Items.Max(x => x.CommitTimestamp));
-                }
-
+                UpdateCursorFromItems<CatalogIndex, CatalogPageItem>(cursor, catalogIndex);
                 return;
             }
 
@@ -88,7 +86,7 @@ namespace Knapcode.CatalogDownloader
                 Log($"Downloading catalog page: {pageItem.Url}");
                 var page = await DownloadAndParseAsync<CatalogPage>(pageItem.Url);
 
-                FilterItems<CatalogPage, CatalogLeafItem>(page, cursor);
+                FilterItems<CatalogPage, CatalogLeafItem>(page, cursor, pageItem.CommitTimestamp);
                 if (_config.Verbose)
                 {
                     Log($"Found {page.Value.Items.Count} new leaves in this page.");
@@ -98,48 +96,36 @@ namespace Knapcode.CatalogDownloader
                 
                 if (_config.Depth == DownloadDepth.CatalogPage)
                 {
-                    if (page.Value.Items.Any())
-                    {
-                        cursor.Write(new[]
-                        {
-                            pageItem.CommitTimestamp,
-                            page.Value.Items.Max(x => x.CommitTimestamp)
-                        }.Min());
-                    }
+                    UpdateCursorFromItems<CatalogPage, CatalogLeafItem>(cursor, page);
                 }
                 else
                 {
-                    _logDepth++;
-                    try
+                    if (page.Value.Items.Any())
                     {
-                        if (page.Value.Items.Any())
-                        {
-                            var commitTimestampCount = page
-                                .Value
-                                .Items
-                                .GroupBy(x => x.CommitTimestamp)
-                                .ToDictionary(x => x.Key, x => x.Count());
-                            var work = new ConcurrentQueue<BaseCatalogItem>(page.Value.Items);
+                        _logDepth++;
 
-                            var tasks = Enumerable
-                                .Range(0, _config.ParallelDownloads)
-                                .Select(async i =>
+                        var commitTimestampCount = page
+                            .Value
+                            .Items
+                            .GroupBy(x => x.CommitTimestamp)
+                            .ToDictionary(x => x.Key, x => x.Count());
+                        var work = new ConcurrentQueue<BaseCatalogItem>(page.Value.Items);
+
+                        var tasks = Enumerable
+                            .Range(0, _config.ParallelDownloads)
+                            .Select(async i =>
+                            {
+                                while (work.TryDequeue(out var leafItem))
                                 {
-                                    while (work.TryDequeue(out var leafItem))
-                                    {
-                                        await DownloadLeafAsync(
-                                            pageItem.CommitTimestamp,
-                                            commitTimestampCount,
-                                            leafItem,
-                                            cursor);
-                                    }
-                                })
-                                .ToList();
-                            await Task.WhenAll(tasks);
-                        }
-                    }
-                    finally
-                    {
+                                    await DownloadLeafAsync(
+                                        cursor,
+                                        commitTimestampCount,
+                                        leafItem);
+                                }
+                            })
+                            .ToList();
+                        await Task.WhenAll(tasks);
+
                         _logDepth--;
                     }
                 }
@@ -147,10 +133,19 @@ namespace Knapcode.CatalogDownloader
                 completedPages++;
                 if (_config.MaxPages.HasValue && completedPages >= _config.MaxPages.Value)
                 {
-                    _logDepth = 0;
                     Log($"Completed {completedPages} pages. Terminating.");
                     return;
                 }
+            }
+        }
+
+        private static void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
+            where TItem : BaseCatalogItem
+            where TList : BaseCatalogList<TItem>
+        {
+            if (parsedFile.Value.Items.Any())
+            {
+                cursor.Write(parsedFile.Value.Items.Max(x => x.CommitTimestamp));
             }
         }
 
@@ -160,10 +155,9 @@ namespace Knapcode.CatalogDownloader
         }
 
         async Task DownloadLeafAsync(
-            DateTimeOffset pageItemCommitTimestamp,
+            Cursor cursor,
             Dictionary<DateTimeOffset, int> commitTimestampCount,
-            BaseCatalogItem leafItem,
-            Cursor cursor)
+            BaseCatalogItem leafItem)
         {
             Log($"Downloading catalog leaf: {leafItem.Url}");
             var destPath = GetDestinationPath(leafItem.Url);
@@ -176,11 +170,9 @@ namespace Knapcode.CatalogDownloader
                 {
                     commitTimestampCount.Remove(leafItem.CommitTimestamp);
 
-                    // Write the timestamp only it less than the page item commit timestamp to protect against partial
-                    // commits to the catalog. Also, only write the timestamp if it's the last item in the commit and
+                    // Only write the timestamp if it's the last item in the commit and
                     // it's the lowest commit timestamp of all pending leaves.
-                    if (leafItem.CommitTimestamp <= pageItemCommitTimestamp
-                        && (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key)))
+                    if (commitTimestampCount.Count == 0 || leafItem.CommitTimestamp < commitTimestampCount.Min(x => x.Key))
                     {
                         cursor.Write(leafItem.CommitTimestamp);
                     }
@@ -188,7 +180,7 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        static void FilterItems<TList, TItem>(ParsedFile<TList> parsedFile, Cursor cursor)
+        static void FilterItems<TList, TItem>(ParsedFile<TList> parsedFile, Cursor cursor, DateTimeOffset max)
             where TItem : BaseCatalogItem
             where TList : BaseCatalogList<TItem>
         {
@@ -196,6 +188,7 @@ namespace Knapcode.CatalogDownloader
                 .Value
                 .Items
                 .Where(x => x.CommitTimestamp > cursor.Value)
+                .Where(x => x.CommitTimestamp <= max)
                 .OrderBy(x => x.CommitTimestamp)
                 .ThenBy(x => x.Url)
                 .ToList();
