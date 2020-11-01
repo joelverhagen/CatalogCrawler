@@ -5,7 +5,6 @@ namespace Knapcode.CatalogDownloader
     class DownloaderConfiguration
     {
         public string UserAgent { get; set; }
-        public string CursurSuffix { get; set; }
         public string ServiceIndexUrl { get; set; } = "https://api.nuget.org/v3/index.json";
         public string DataDirectory { get; set; } = "data";
         public DownloadDepth Depth { get; set; } = DownloadDepth.CatalogPage;
@@ -15,6 +14,5 @@ namespace Knapcode.CatalogDownloader
         public bool SaveToDisk { get; set; } = false;
         public bool FormatPaths { get; set; } = false;
         public int ParallelDownloads { get; set; } = 16;
-        public DateTimeOffset DefaultCursorValue { get; set; } = DateTimeOffset.MinValue;
     }
 }

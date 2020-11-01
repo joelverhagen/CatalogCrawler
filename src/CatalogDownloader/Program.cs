@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Knapcode.CatalogDownloader
@@ -56,11 +57,15 @@ namespace Knapcode.CatalogDownloader
             int parallelDownloads,
             IDepthLogger logger)
         {
+            var cursorProvider = new CursorProvider(
+                cursorSuffix: $"download.{depth}",
+                defaultCursorValue: DateTimeOffset.MinValue,
+                logger: logger);
+
             var downloader = new Downloader(
                 httpClient,
                 new DownloaderConfiguration
                 {
-                    CursurSuffix = $"download.{depth}",
                     ServiceIndexUrl = serviceIndexUrl,
                     DataDirectory = dataDir,
                     Depth = depth,
@@ -71,6 +76,7 @@ namespace Knapcode.CatalogDownloader
                     FormatPaths = formatPaths,
                     ParallelDownloads = parallelDownloads,
                 },
+                cursorProvider,
                 NullVisitor.Instance,
                 logger);
 

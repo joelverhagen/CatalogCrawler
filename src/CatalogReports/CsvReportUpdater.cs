@@ -1,4 +1,5 @@
 ﻿using Knapcode.CatalogDownloader;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -20,13 +21,17 @@ namespace Knapcode.CatalogReports
 
         public async Task UpdateAsync<T>(ICsvReportVisitor<T> reportVisitor)
         {
-            _config.CursurSuffix = $"report.{reportVisitor.Name}";
+            var cursorProvider = new CursorProvider(
+                cursorSuffix: $"report.{reportVisitor.Name}",
+                defaultCursorValue: DateTimeOffset.MinValue,
+                logger: _logger);
 
             var csvPath = Path.Combine(_config.DataDirectory, "reports", $"{reportVisitor.Name}.csv");
 
             var downloader = new Downloader(
                 _httpClient,
                 _config,
+                cursorProvider,
                 new CsvReportVisitor<T>(reportVisitor, csvPath),
                 _logger);
 

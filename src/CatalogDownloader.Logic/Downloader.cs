@@ -14,6 +14,7 @@ namespace Knapcode.CatalogDownloader
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
         private readonly string _userAgent;
+        private readonly ICursorProvider _cursorProvider;
         private readonly IVisitor _visitor;
         private readonly IDepthLogger _logger;
         private int _logDepth = 0;
@@ -21,17 +22,14 @@ namespace Knapcode.CatalogDownloader
         public Downloader(
             HttpClient httpClient,
             DownloaderConfiguration config,
+            ICursorProvider cursorProvider,
             IVisitor visitor,
             IDepthLogger logger)
         {
-            if (string.IsNullOrWhiteSpace(config.CursurSuffix))
-            {
-                throw new ArgumentException("The cursor suffix setting must be set.", nameof(config));
-            }
-
             _httpClient = httpClient;
             _config = config;
             _userAgent = string.IsNullOrWhiteSpace(config.UserAgent) ? GetUserAgent() : config.UserAgent;
+            _cursorProvider = cursorProvider;
             _visitor = visitor;
             _logger = logger;
         }
@@ -43,7 +41,6 @@ namespace Knapcode.CatalogDownloader
             LogVerbose("Configuration:");
             _logDepth++;
             LogVerbose("User-Agent: {UserAgent}", _userAgent);
-            LogVerbose("Cursor suffix: {CursorSuffix}", _config.CursurSuffix);
             LogVerbose("Service index: {ServiceIndexUrl}", _config.ServiceIndexUrl);
             LogVerbose("Data directory: {DataDirectory}", _config.DataDirectory);
             LogVerbose("Depth: {Depth}", _config.Depth);
@@ -97,9 +94,7 @@ namespace Knapcode.CatalogDownloader
             LogInformation("Downloading catalog index: {Url}", catalogIndexUrl);
             var catalogIndex = await DownloadAndParseAsync<CatalogIndex>(catalogIndexUrl);
 
-            var catalogIndexDir = Path.GetDirectoryName(catalogIndex.Path);
-            var cursorPath = Path.Combine(catalogIndexDir, ".meta", $"cursor.{_config.CursurSuffix}.json");
-            var cursor = new Cursor(cursorPath, _config.DefaultCursorValue, _logger);
+            var cursor = _cursorProvider.GetCursor(catalogIndex.Path);
             cursor.Read(_logDepth);
             FilterItems<CatalogIndex, CatalogPageItem>(catalogIndex, cursor, DateTimeOffset.MaxValue);
             LogVerbose("Found {Count} pages with new data.", catalogIndex.Value.Items.Count);
@@ -199,7 +194,7 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        void UpdateCursorFromItems<TList, TItem>(Cursor cursor, ParsedFile<TList> parsedFile)
+        void UpdateCursorFromItems<TList, TItem>(ICursor cursor, ParsedFile<TList> parsedFile)
             where TItem : BaseCatalogItem
             where TList : BaseCatalogList<TItem>
         {
@@ -220,7 +215,7 @@ namespace Knapcode.CatalogDownloader
         }
 
         async Task DownloadLeafAsync(
-            Cursor cursor,
+            ICursor cursor,
             Dictionary<DateTimeOffset, int> commitTimestampCount,
             BaseCatalogItem leafItem)
         {
@@ -245,7 +240,7 @@ namespace Knapcode.CatalogDownloader
             }
         }
 
-        static void FilterItems<TList, TItem>(ParsedFile<TList> parsedFile, Cursor cursor, DateTimeOffset max)
+        static void FilterItems<TList, TItem>(ParsedFile<TList> parsedFile, ICursor cursor, DateTimeOffset max)
             where TItem : BaseCatalogItem
             where TList : BaseCatalogList<TItem>
         {
