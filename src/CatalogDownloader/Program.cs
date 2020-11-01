@@ -1,16 +1,10 @@
 ﻿using System.Net.Http;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Knapcode.CatalogDownloader
 {
     class Program
     {
-        /// <summary>
-        /// Just used for testing.
-        /// </summary>
-        public static IDepthLogger Logger { get; set; }
-
         /// <summary>A tool to download all NuGet catalog documents to a local directory.</summary>
         /// <param name="serviceIndexUrl">The NuGet V3 service index URL.</param>
         /// <param name="dataDir">The directory for storing catalog documents.</param>
@@ -33,14 +27,9 @@ namespace Knapcode.CatalogDownloader
             bool verbose = false)
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", GetUserAgent());
 
-            var depthLogger = Logger;
-            if (depthLogger == null)
-            {
-                var consoleLogger = new ConsoleLogger(verbose);
-                depthLogger = new DepthLogger(consoleLogger);
-            }
+            var consoleLogger = new ConsoleLogger(verbose);
+            var depthLogger = new DepthLogger(consoleLogger);
 
             await ExecuteAsync(
                 httpClient,
@@ -86,15 +75,6 @@ namespace Knapcode.CatalogDownloader
                 logger);
 
             await downloader.DownloadAsync();
-        }
-
-        static string GetUserAgent()
-        {
-            var assembly = typeof(Program).Assembly;
-            var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>().Title;
-            var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-            var userAgent = $"{title}/{version}";
-            return userAgent;
         }
     }
 }

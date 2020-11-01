@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Knapcode.CatalogDownloader
@@ -12,6 +13,7 @@ namespace Knapcode.CatalogDownloader
     {
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
+        private readonly string _userAgent;
         private readonly IVisitor _visitor;
         private readonly IDepthLogger _logger;
         private int _logDepth = 0;
@@ -24,6 +26,7 @@ namespace Knapcode.CatalogDownloader
         {
             _httpClient = httpClient;
             _config = config;
+            _userAgent = string.IsNullOrWhiteSpace(config.UserAgent) ? GetUserAgent() : config.UserAgent;
             _visitor = visitor;
             _logger = logger;
         }
@@ -34,7 +37,7 @@ namespace Knapcode.CatalogDownloader
 
             LogVerbose("Configuration:");
             _logDepth++;
-            LogVerbose("User-Agent: {UserAgent}", _httpClient.DefaultRequestHeaders.UserAgent);
+            LogVerbose("User-Agent: {UserAgent}", _userAgent);
             LogVerbose("Cursor suffix: {CursorSuffix}", _config.CursurSuffix);
             LogVerbose("Service index: {ServiceIndexUrl}", _config.ServiceIndexUrl);
             LogVerbose("Data directory: {DataDirectory}", _config.DataDirectory);
@@ -74,6 +77,15 @@ namespace Knapcode.CatalogDownloader
             }
 
             await ProcessCatalogAsync(catalogResource.Url);
+        }
+
+        static string GetUserAgent()
+        {
+            var assembly = typeof(Downloader).Assembly;
+            var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>().Title;
+            var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            var userAgent = $"{title}/{version} (+https://github.com/joelverhagen/CatalogDownloader)";
+            return userAgent;
         }
 
         async Task ProcessCatalogAsync(string catalogIndexUrl)
@@ -301,7 +313,11 @@ namespace Knapcode.CatalogDownloader
             {
                 try
                 {
-                    using var responseStream = await _httpClient.GetStreamAsync(url);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    request.Headers.TryAddWithoutValidation("User-Agent", _userAgent);
+                    using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    response.EnsureSuccessStatusCode();
+                    using var responseStream = await response.Content.ReadAsStreamAsync();
                     return await processAsync(responseStream);
                 }
                 catch (Exception ex) when (i < maxAttemts - 1)

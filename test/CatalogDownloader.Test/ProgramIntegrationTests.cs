@@ -24,33 +24,35 @@ namespace Knapcode.CatalogDownloader
         private const string Step4 = "TestData/Step4";
         private const string NuGetOrg = "TestData/api.nuget.org";
         private const string CursorFormat = "{0}/.meta/cursor.download.{1}.json";
-        private readonly ITestOutputHelper _output;
+
+        private readonly DepthLogger _logger;
         private readonly DefaultWebApplicationFactory<StaticFilesStartup> _factory;
         private readonly TestDirectory _testDir;
         private readonly string _dataDir;
         private readonly string _webRoot;
-        private string _host;
         private readonly WebApplicationFactory<StaticFilesStartup> _builder;
         private readonly ConcurrentQueue<string> _paths;
-        private readonly HttpClient _httpClient;
-        private DownloadDepth _depth;
-        private readonly DepthLogger _logger;
+        private HttpClient _httpClient;
+
+        private string _serviceIndexUrl = "https://localhost/index.json";
+        private DownloadDepth _depth = DownloadDepth.CatalogLeaf;
         private int? _maxPages;
         private int? _maxCommits;
+        private bool _formatPaths = true;
+        private int _parallelDownloads = 1;
+
+        private string _host = "localhost";
         private int _expectedRequestCount;
 
         public ProgramIntegrationTests(
             ITestOutputHelper output,
             DefaultWebApplicationFactory<StaticFilesStartup> factory)
         {
-            _output = output;
+            _logger = new DepthLogger(new TestLogger(output));
             _factory = factory;
             _testDir = new TestDirectory();
             _dataDir = Path.Combine(_testDir, "data");
             _webRoot = Path.Combine(_testDir, "wwwroot");
-            _host = "localhost";
-            _depth = DownloadDepth.CatalogLeaf;
-            _logger = new DepthLogger(new TestLogger(output));
 
             _builder = _factory.WithWebHostBuilder(b => b
                 .ConfigureLogging(b => b.SetMinimumLevel(LogLevel.Error))
@@ -86,14 +88,13 @@ namespace Knapcode.CatalogDownloader
         public async Task VerifyAgainstNuGetOrg()
         {
             _host = "api.nuget.org";
-            Program.Logger = _logger;
+            _serviceIndexUrl = "https://api.nuget.org/v3/index.json";
+            _maxCommits = 1;
+            _formatPaths = false;
+            _parallelDownloads = 4;
+            _httpClient = new HttpClient();
 
-            await Program.Main(
-                dataDir: _dataDir,
-                jsonFormatting: JsonFormatting.Pretty,
-                maxCommits: 1,
-                parallelDownloads: 4,
-                verbose: true);
+            await ExecuteAsync();
 
             AssertFileExists(GetFullFilePath("v3/index.json"));
             AssertFileExists(GetFullFilePath("v3/catalog0/index.json"));
@@ -362,14 +363,14 @@ namespace Knapcode.CatalogDownloader
         {
             await Program.ExecuteAsync(
                 httpClient: _httpClient,
-                serviceIndexUrl: "https://localhost/index.json",
+                serviceIndexUrl: _serviceIndexUrl,
                 dataDir: _dataDir,
                 depth: _depth,
                 jsonFormatting: JsonFormatting.Pretty,
                 maxPages: _maxPages,
                 maxCommits: _maxCommits,
-                formatPaths: true,
-                parallelDownloads: 1,
+                formatPaths: _formatPaths,
+                parallelDownloads: _parallelDownloads,
                 logger: _logger);
         }
 
