@@ -20,7 +20,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --configuration Release --no-restore "/p:CIRunId=ci.${{github.run_id}}"
+      run: dotnet build --configuration Release --no-restore "/p:CIRunId=${{github.run_id}}"
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
     - name: Upload a Build Artifact
