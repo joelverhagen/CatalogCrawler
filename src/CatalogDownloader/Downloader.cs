@@ -31,6 +31,8 @@ namespace Knapcode.CatalogDownloader
 
             if (_config.Verbose)
             {
+                Log("Configuration:");
+                _logDepth++;
                 Log($"User-Agent: {_httpClient.DefaultRequestHeaders.UserAgent?.ToString()}");
                 Log($"Cursor suffix: {_config.CursurSuffix}");
                 Log($"Service index: {_config.ServiceIndexUrl}");
@@ -38,9 +40,12 @@ namespace Knapcode.CatalogDownloader
                 Log($"Depth: {_config.Depth}");
                 Log($"JSON formatting: {_config.JsonFormatting}");
                 Log($"Max pages: {_config.MaxPages}");
+                Log($"Max commits: {_config.MaxCommits}");
                 Log($"Save to disk: {_config.SaveToDisk}");
                 Log($"Format paths: {_config.FormatPaths}");
                 Log($"Parallel downloads: {_config.ParallelDownloads}");
+                Log($"Verbose: {_config.Verbose}");
+                _logDepth--;
                 Log("Starting..." + Environment.NewLine);
             }
 
