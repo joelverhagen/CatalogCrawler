@@ -24,6 +24,11 @@ namespace Knapcode.CatalogDownloader
             IVisitor visitor,
             IDepthLogger logger)
         {
+            if (string.IsNullOrWhiteSpace(config.CursurSuffix))
+            {
+                throw new ArgumentException("The cursor suffix setting must be set.", nameof(config));
+            }
+
             _httpClient = httpClient;
             _config = config;
             _userAgent = string.IsNullOrWhiteSpace(config.UserAgent) ? GetUserAgent() : config.UserAgent;
@@ -383,7 +388,7 @@ namespace Knapcode.CatalogDownloader
             {
                 if (!File.Exists(_cursorPath))
                 {
-                    Value = DateTimeOffset.MinValue;
+                    Value = _downloader._config.DefaultCursorValue;
                     _downloader.LogVerbose("Cursor {CursurSuffix} does not exist. Using minimum value: {Value:O}", _downloader._config.CursurSuffix, Value);
                 }
                 else

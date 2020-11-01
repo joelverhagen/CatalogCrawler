@@ -22,6 +22,11 @@ namespace Knapcode.CatalogDownloader
             Exception exception,
             Func<TState, Exception, string> formatter)
         {
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
+
             Console.WriteLine(formatter(state, exception));
         }
     }
