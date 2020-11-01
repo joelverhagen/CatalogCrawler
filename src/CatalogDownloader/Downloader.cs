@@ -44,6 +44,16 @@ namespace Knapcode.CatalogDownloader
                 Log("Starting..." + Environment.NewLine);
             }
 
+            if (_config.MaxCommits.HasValue && _config.Depth < DownloadDepth.CatalogPage)
+            {
+                throw new InvalidOperationException($"The download depth must be at least {DownloadDepth.CatalogPage} when setting a maximum number of commits.");
+            }
+
+            if (_config.MaxPages.HasValue && _config.Depth < DownloadDepth.CatalogIndex)
+            {
+                throw new InvalidOperationException($"The download depth must be at least {DownloadDepth.CatalogIndex} when setting a maximum number of pages.");
+            }
+
             Log($"Downloading service index: {_config.ServiceIndexUrl}");
             var serviceIndex = await DownloadAndParseAsync<ServiceIndex>(_config.ServiceIndexUrl);
             await _visitor.OnServiceIndexAsync(serviceIndex.Value);
@@ -71,6 +81,17 @@ namespace Knapcode.CatalogDownloader
                 Log($"Found {catalogIndex.Value.Items.Count} pages with new data.");
             }
 
+            if (_config.MaxPages.HasValue
+                && _config.MaxPages.Value < catalogIndex.Value.Items.Count)
+            {
+                catalogIndex.Value.Items = catalogIndex
+                    .Value
+                    .Items
+                    .Take(_config.MaxPages.Value)
+                    .ToList();
+                Log($"Only processing {catalogIndex.Value.Items.Count} new pages, due to max pages limit.");
+            }
+
             await _visitor.OnCatalogIndexAsync(catalogIndex.Value);
             
             if (_config.Depth == DownloadDepth.CatalogIndex)
@@ -81,6 +102,7 @@ namespace Knapcode.CatalogDownloader
 
             _logDepth++;
             var completedPages = 0;
+            var completedCommits = 0;
             foreach (var pageItem in catalogIndex.Value.Items)
             {
                 Log($"Downloading catalog page: {pageItem.Url}");
@@ -90,6 +112,28 @@ namespace Knapcode.CatalogDownloader
                 if (_config.Verbose)
                 {
                     Log($"Found {page.Value.Items.Count} new leaves in this page.");
+                }
+
+                var pageCommits = page
+                    .Value
+                    .Items
+                    .Select(x => x.CommitTimestamp)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+                var commitCount = pageCommits.Count;
+                if (_config.MaxCommits.HasValue)
+                {
+                    var remainingCommits = _config.MaxCommits.Value - completedCommits;
+                    if (pageCommits.Count > remainingCommits)
+                    {
+                        commitCount = remainingCommits;
+                        FilterItems<CatalogPage, CatalogLeafItem>(page, cursor, pageCommits[remainingCommits - 1]);
+                        if (_config.Verbose)
+                        {
+                            Log($"Only processing {page.Value.Items.Count} new leaves, due to max commits limit.");
+                        }
+                    }
                 }
 
                 await _visitor.OnCatalogPageAsync(page.Value);
@@ -109,6 +153,7 @@ namespace Knapcode.CatalogDownloader
                             .Items
                             .GroupBy(x => x.CommitTimestamp)
                             .ToDictionary(x => x.Key, x => x.Count());
+
                         var work = new ConcurrentQueue<BaseCatalogItem>(page.Value.Items);
 
                         var tasks = Enumerable
@@ -131,9 +176,11 @@ namespace Knapcode.CatalogDownloader
                 }
 
                 completedPages++;
-                if (_config.MaxPages.HasValue && completedPages >= _config.MaxPages.Value)
+                completedCommits += commitCount;
+
+                if (_config.MaxCommits.HasValue && completedCommits >= _config.MaxCommits.Value)
                 {
-                    Log($"Completed {completedPages} pages. Terminating.");
+                    Log($"Completed {completedCommits} commits. Terminating.");
                     return;
                 }
             }

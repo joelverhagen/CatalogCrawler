@@ -1,5 +1,4 @@
 {
-  "commitTimeStamp": "2020-10-22T00:00:00Z",
   "items": [
     {
       "@id": "https://localhost/catalog/page0.json",
@@ -7,7 +6,11 @@
     },
     {
       "@id": "https://localhost/catalog/page1.json",
-      "commitTimeStamp": "2020-10-22T00:00:00Z"
+      "commitTimeStamp": "2020-10-24T00:00:00Z"
+    },
+    {
+      "@id": "https://localhost/catalog/page2.json",
+      "commitTimeStamp": "2020-10-25T00:00:00Z"
     }
   ]
 }

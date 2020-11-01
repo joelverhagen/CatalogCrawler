@@ -12,6 +12,7 @@ namespace Knapcode.CatalogDownloader
         /// <param name="depth">The depth of documents to download.</param>
         /// <param name="jsonFormatting">The setting to use for formatting downloaded JSON.</param>
         /// <param name="maxPages">The maximum number of pages to complete before terminating.</param>
+        /// <param name="maxCommits">The maximum number of commits to complete before terminating.</param>
         /// <param name="formatPaths">Format paths to mitigate directories with many files.</param>
         /// <param name="parallelDownloads">The maximum number of parallel downloads.</param>
         /// <param name="verbose">Whether or not to write verbose messages.</param>
@@ -21,6 +22,7 @@ namespace Knapcode.CatalogDownloader
             DownloadDepth depth = DownloadDepth.CatalogLeaf,
             JsonFormatting jsonFormatting = JsonFormatting.Unchanged,
             int? maxPages = null,
+            int? maxCommits = null,
             bool formatPaths = false,
             int parallelDownloads = 16,
             bool verbose = false)
@@ -34,6 +36,7 @@ namespace Knapcode.CatalogDownloader
                 depth,
                 jsonFormatting,
                 maxPages,
+                maxCommits,
                 formatPaths,
                 parallelDownloads,
                 verbose);
@@ -46,6 +49,7 @@ namespace Knapcode.CatalogDownloader
             DownloadDepth depth,
             JsonFormatting jsonFormatting,
             int? maxPages,
+            int? maxCommits,
             bool formatPaths,
             int parallelDownloads,
             bool verbose)
@@ -60,6 +64,7 @@ namespace Knapcode.CatalogDownloader
                     Depth = depth,
                     JsonFormatting = jsonFormatting,
                     MaxPages = maxPages,
+                    MaxCommits = maxCommits,
                     SaveToDisk = true,
                     FormatPaths = formatPaths,
                     ParallelDownloads = parallelDownloads,

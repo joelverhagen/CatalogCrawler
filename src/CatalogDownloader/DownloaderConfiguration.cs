@@ -8,6 +8,7 @@
         public DownloadDepth Depth { get; set; }
         public JsonFormatting JsonFormatting { get; set; }
         public int? MaxPages { get; set; }
+        public int? MaxCommits { get; set; }
         public bool SaveToDisk { get; set; }
         public bool FormatPaths { get; set; }
         public int ParallelDownloads { get; set; }
