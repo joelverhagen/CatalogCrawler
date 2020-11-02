@@ -1,7 +1,5 @@
 ﻿using CsvHelper;
-using CsvHelper.TypeConversion;
 using Knapcode.CatalogDownloader;
-using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -38,8 +36,7 @@ namespace Knapcode.CatalogReports
             using var stream = new FileStream(_csvPath, FileMode.Append);
             using var textWriter = new StreamWriter(stream);
             using var csvWriter = new CsvWriter(textWriter, CultureInfo.InvariantCulture);
-            var options = new TypeConverterOptions { Formats = new[] { "O" } };
-            csvWriter.Configuration.TypeConverterOptionsCache.AddOptions<DateTimeOffset>(options);
+            csvWriter.SetDefaultConfiguration();
             csvWriter.Configuration.HasHeaderRecord = writeHeader;
             csvWriter.WriteRecords(records);
         }
