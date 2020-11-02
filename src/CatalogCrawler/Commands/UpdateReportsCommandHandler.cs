@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using System;
+using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -7,13 +8,15 @@ namespace Knapcode.CatalogCrawler
 {
     class UpdateReportsCommandHandler : ICommandFactory
     {
+        private readonly Action<string> _writeLine;
         private readonly Option<string> _dataDirOption;
         private readonly Option<int?> _maxPagesOption;
         private readonly Option<int?> _maxCommitsOption;
         private readonly Option<bool> _verboseOption;
 
-        public UpdateReportsCommandHandler()
+        public UpdateReportsCommandHandler(Action<string> writeLine)
         {
+            _writeLine = writeLine;
             _dataDirOption = new Option<string>(
                 alias: "--data-dir",
                 getDefaultValue: () => "data",
@@ -59,7 +62,7 @@ namespace Knapcode.CatalogCrawler
                 MaxCommits = context.ParseResult.ValueForOption(_maxCommitsOption),
             };
 
-            var consoleLogger = new ConsoleLogger(context.ParseResult.ValueForOption(_verboseOption));
+            var consoleLogger = new ConsoleLogger(_writeLine, context.ParseResult.ValueForOption(_verboseOption));
             var depthLogger = new DepthLogger(consoleLogger);
 
             var csvReportUpdater = new CsvReportUpdater(httpClient, config, depthLogger);

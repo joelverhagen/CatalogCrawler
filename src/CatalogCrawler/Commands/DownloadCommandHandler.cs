@@ -8,6 +8,7 @@ namespace Knapcode.CatalogCrawler
 {
     class DownloadCommandHandler : ICommandFactory
     {
+        private readonly Action<string> _writeLine;
         private readonly Option<string> _serviceIndexUrlOption;
         private readonly Option<string> _dataDirOption;
         private readonly Option<DownloadDepth> _depthOption;
@@ -18,8 +19,9 @@ namespace Knapcode.CatalogCrawler
         private readonly Option<int> _parallelDownloadsOption;
         private readonly Option<bool> _verboseOption;
 
-        public DownloadCommandHandler()
+        public DownloadCommandHandler(Action<string> writeLine)
         {
+            _writeLine = writeLine;
             _serviceIndexUrlOption = new Option<string>(
                 alias: "--service-index-url",
                 getDefaultValue: () => "https://api.nuget.org/v3/index.json",
@@ -83,7 +85,7 @@ namespace Knapcode.CatalogCrawler
         {
             using var httpClient = new HttpClient();
 
-            var consoleLogger = new ConsoleLogger(context.ParseResult.ValueForOption(_verboseOption));
+            var consoleLogger = new ConsoleLogger(_writeLine, context.ParseResult.ValueForOption(_verboseOption));
             var depthLogger = new DepthLogger(consoleLogger);
 
             await ExecuteAsync(

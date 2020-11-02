@@ -5,10 +5,12 @@ namespace Knapcode.CatalogCrawler
 {
     class ConsoleLogger : ILogger
     {
+        private readonly Action<string> _writeLine;
         private readonly LogLevel _logLevel;
 
-        public ConsoleLogger(bool verbose)
+        public ConsoleLogger(Action<string> writeLine, bool verbose)
         {
+            _writeLine = writeLine;
             _logLevel = verbose ? LogLevel.Debug : LogLevel.Information;
         }
 
@@ -27,7 +29,7 @@ namespace Knapcode.CatalogCrawler
                 return;
             }
 
-            Console.WriteLine(formatter(state, exception));
+            _writeLine(formatter(state, exception));
         }
     }
 }
