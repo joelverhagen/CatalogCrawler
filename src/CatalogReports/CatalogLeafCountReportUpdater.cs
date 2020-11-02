@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    class CatalogLeafCountReportVisitor : ICsvAggregateReportVisitor<DateTimeOffset, int>
+    class CatalogLeafCountReportVisitor : ICsvAggregateReportUpdater<DateTimeOffset, int>
     {
-        public string Name => "CatalogLeafCount";
+        public string ReportName => "CatalogLeafCount";
         public IComparer<DateTimeOffset> KeyComparer => Comparer<DateTimeOffset>.Default;
 
         public int Merge(int existingValue, int newValue)
@@ -16,7 +16,7 @@ namespace Knapcode.CatalogReports
             return existingValue + newValue;
         }
 
-        public Task<IReadOnlyDictionary<DateTimeOffset, int>> OnCatalogPageAsync(CatalogPage catalogPage)
+        public Task<IReadOnlyDictionary<DateTimeOffset, int>> GetRecordsAsync(CatalogPage catalogPage)
         {
             var result = catalogPage
                 .Items

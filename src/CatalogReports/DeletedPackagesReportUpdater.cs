@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    class DeletedPackagesReportVisitor : ICsvAppendReportVisitor<DeletedPackage>
+    class DeletedPackagesReportVisitor : ICsvAppendReportUpdater<DeletedPackage>
     {
-        public string Name => "DeletedPackages";
+        public string ReportName => "DeletedPackages";
 
-        public Task<IReadOnlyList<DeletedPackage>> OnCatalogPageAsync(CatalogPage catalogPage)
+        public Task<IReadOnlyList<DeletedPackage>> GetRecordsAsync(CatalogPage catalogPage)
         {
             var output = new List<DeletedPackage>();
 

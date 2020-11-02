@@ -29,11 +29,9 @@ namespace Knapcode.CatalogReports
             var consoleLogger = new ConsoleLogger(verbose);
             var depthLogger = new DepthLogger(consoleLogger);
             
-            // var csvAppendReportUpdater = new CsvAppendReportUpdater(httpClient, config, depthLogger);
-            // await csvAppendReportUpdater.UpdateAsync(new DeletedPackagesReportVisitor());
-
-            var csvAggregateReportUpdater = new CsvAggregateReportUpdater(httpClient, config, depthLogger);
-            await csvAggregateReportUpdater.UpdateAsync(new CatalogLeafCountReportVisitor());
+            var csvReportUpdater = new CsvReportUpdater(httpClient, config, depthLogger);
+            await csvReportUpdater.UpdateAsync(new DeletedPackagesReportVisitor());
+            await csvReportUpdater.UpdateAsync(new CatalogLeafCountReportVisitor());
         }
     }
 }

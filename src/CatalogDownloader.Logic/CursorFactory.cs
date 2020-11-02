@@ -3,13 +3,13 @@ using System.IO;
 
 namespace Knapcode.CatalogDownloader
 {
-    class CursorProvider : ICursorProvider
+    class CursorFactory : ICursorFactory
     {
         private readonly string _cursorSuffix;
         private readonly DateTimeOffset _defaultCursorValue;
         private readonly IDepthLogger _logger;
 
-        public CursorProvider(string cursorSuffix, DateTimeOffset defaultCursorValue, IDepthLogger logger)
+        public CursorFactory(string cursorSuffix, DateTimeOffset defaultCursorValue, IDepthLogger logger)
         {
             _cursorSuffix = cursorSuffix;
             _defaultCursorValue = defaultCursorValue;

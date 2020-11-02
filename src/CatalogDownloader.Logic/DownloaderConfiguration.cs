@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Knapcode.CatalogDownloader
+﻿namespace Knapcode.CatalogDownloader
 {
     class DownloaderConfiguration
     {

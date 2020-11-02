@@ -57,7 +57,7 @@ namespace Knapcode.CatalogDownloader
             int parallelDownloads,
             IDepthLogger logger)
         {
-            var cursorProvider = new CursorProvider(
+            var cursorProvider = new CursorFactory(
                 cursorSuffix: $"download.{depth}",
                 defaultCursorValue: DateTimeOffset.MinValue,
                 logger: logger);

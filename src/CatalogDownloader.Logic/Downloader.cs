@@ -14,7 +14,7 @@ namespace Knapcode.CatalogDownloader
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
         private readonly string _userAgent;
-        private readonly ICursorProvider _cursorProvider;
+        private readonly ICursorFactory _cursorProvider;
         private readonly IVisitor _visitor;
         private readonly IDepthLogger _logger;
         private int _logDepth = 0;
@@ -22,7 +22,7 @@ namespace Knapcode.CatalogDownloader
         public Downloader(
             HttpClient httpClient,
             DownloaderConfiguration config,
-            ICursorProvider cursorProvider,
+            ICursorFactory cursorProvider,
             IVisitor visitor,
             IDepthLogger logger)
         {

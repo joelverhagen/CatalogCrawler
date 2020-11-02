@@ -9,10 +9,10 @@ namespace Knapcode.CatalogReports
 {
     class CsvAppendReportVisitor<T> : IVisitor
     {
-        private readonly ICsvAppendReportVisitor<T> _visitor;
+        private readonly ICsvAppendReportUpdater<T> _visitor;
         private readonly string _csvPath;
 
-        public CsvAppendReportVisitor(ICsvAppendReportVisitor<T> visitor, string csvPath)
+        public CsvAppendReportVisitor(ICsvAppendReportUpdater<T> visitor, string csvPath)
         {
             _visitor = visitor;
             _csvPath = csvPath;
@@ -20,7 +20,7 @@ namespace Knapcode.CatalogReports
 
         public async Task OnCatalogPageAsync(CatalogPage catalogPage)
         {
-            var records = await _visitor.OnCatalogPageAsync(catalogPage);
+            var records = await _visitor.GetRecordsAsync(catalogPage);
             if (!records.Any())
             {
                 return;

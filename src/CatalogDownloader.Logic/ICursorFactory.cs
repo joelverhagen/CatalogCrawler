@@ -1,6 +1,6 @@
 ﻿namespace Knapcode.CatalogDownloader
 {
-    interface ICursorProvider
+    interface ICursorFactory
     {
         ICursor GetCursor(string catalogIndexPath);
     }
