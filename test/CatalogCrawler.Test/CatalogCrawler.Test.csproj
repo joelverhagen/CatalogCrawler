@@ -21,4 +21,9 @@
     <ProjectReference Include="..\..\src\CatalogCrawler\CatalogCrawler.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="TestData\**\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

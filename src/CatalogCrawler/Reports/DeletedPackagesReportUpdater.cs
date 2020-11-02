@@ -5,7 +5,7 @@ namespace Knapcode.CatalogCrawler
 {
     class DeletedPackagesReportVisitor : ICsvAppendReportUpdater<DeletedPackage>
     {
-        public string ReportName => "DeletedPackages";
+        public ReportName Name => ReportName.DeletedPackages;
 
         public Task<IReadOnlyList<DeletedPackage>> GetRecordsAsync(CatalogPage catalogPage)
         {

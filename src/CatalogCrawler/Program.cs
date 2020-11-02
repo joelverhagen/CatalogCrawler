@@ -1,5 +1,7 @@
 ﻿using System;
 using System.CommandLine;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Knapcode.CatalogCrawler
@@ -10,6 +12,15 @@ namespace Knapcode.CatalogCrawler
 
         public static async Task<int> Main(string[] args)
         {
+#if DEBUG
+            const string debugOption = "--debug";
+            if (args.Contains(debugOption))
+            {
+                Debugger.Launch();
+                args = args.Where(x => x != debugOption).ToArray();
+            }
+#endif
+
             var rootCommand = new RootCommand();
 
             var writeLine = WriteLine ?? (s => Console.WriteLine(s));

@@ -5,7 +5,7 @@ namespace Knapcode.CatalogCrawler
 {
     interface ICsvAppendReportUpdater<T>
     {
-        string ReportName { get; }
+        ReportName Name { get; }
         Task<IReadOnlyList<T>> GetRecordsAsync(CatalogPage catalogPage);
     }
 }

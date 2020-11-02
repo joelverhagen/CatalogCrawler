@@ -5,7 +5,7 @@ namespace Knapcode.CatalogCrawler
 {
     interface ICsvAggregateReportUpdater<TKey, TValue>
     {
-        string ReportName { get; }
+        ReportName Name { get; }
         IComparer<TKey> KeyComparer { get; }
         TValue Merge(TValue existingValue, TValue newValue);
         Task<IReadOnlyDictionary<TKey, TValue>> GetRecordsAsync(CatalogPage catalogPage);

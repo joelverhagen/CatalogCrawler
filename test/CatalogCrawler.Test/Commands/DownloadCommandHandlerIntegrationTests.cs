@@ -106,7 +106,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.23.00.00.00/c.1.0.0.json", "catalog/2020/10/23/00/00.00/c.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.24.00.00.00/c.2.0.0.json", "catalog/2020/10/24/00/00.00/c.2.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-24T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-24T00:00:00+00:00\"");
 
             await ExecuteAsync();
 
@@ -115,7 +115,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogPage, Step4, "catalog/page2.json", "catalog/page0-page499/page2.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.25.00.00.00/c.3.0.0.json", "catalog/2020/10/25/00/00.00/c.3.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-25T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-25T00:00:00+00:00\"");
         }
 
         [Theory]
@@ -143,7 +143,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.23.00.00.00/c.1.0.0.json", "catalog/2020/10/23/00/00.00/c.1.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-23T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-23T00:00:00+00:00\"");
 
             await ExecuteAsync();
 
@@ -154,7 +154,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.24.00.00.00/c.2.0.0.json", "catalog/2020/10/24/00/00.00/c.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step4, "catalog/2020.10.25.00.00.00/c.3.0.0.json", "catalog/2020/10/25/00/00.00/c.3.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-25T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-25T00:00:00+00:00\"");
         }
 
         [Theory]
@@ -179,7 +179,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
         }
 
         [Theory]
@@ -204,7 +204,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
         }
 
         [Theory]
@@ -226,7 +226,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-21T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-21T00:00:00+00:00\"");
 
             await VerifyStep3Async();
         }
@@ -247,7 +247,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogPage, Step2a, "catalog/page0.json", "catalog/page0-page499/page0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-20T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-20T00:00:00+00:00\"");
 
             CopyFilesToWebRoot(Step2b);
             CopyFilesToWebRoot(Step3);
@@ -262,7 +262,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
         }
 
         [Theory]
@@ -284,7 +284,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/a.2.0.0.json", "catalog/2020/10/21/00/00.00/a.2.0.0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step2a, "catalog/2020.10.21.00.00.00/b.1.0.0.json", "catalog/2020/10/21/00/00.00/b.1.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-21T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-21T00:00:00+00:00\"");
 
             await VerifyStep3Async();
         }
@@ -300,7 +300,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogPage, Step1, "catalog/page0.json", "catalog/page0-page499/page0.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step1, "catalog/2020.10.20.00.00.00/a.1.0.0.json", "catalog/2020/10/20/00/00.00/a.1.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-20T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-20T00:00:00+00:00\"");
         }
 
         private async Task VerifyStep3Async()
@@ -314,7 +314,7 @@ namespace Knapcode.CatalogCrawler
             AssertDownload(DownloadDepth.CatalogPage, Step3, "catalog/page1.json", "catalog/page0-page499/page1.json");
             AssertDownload(DownloadDepth.CatalogLeaf, Step3, "catalog/2020.10.22.00.00.00/b.2.0.0.json", "catalog/2020/10/22/00/00.00/b.2.0.0.json");
             AssertRequestCount();
-            _dd.AssertCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
+            _dd.AssertDownloadCursor("catalog", "\"2020-10-22T00:00:00+00:00\"");
         }
 
         private async Task ExecuteAsync()

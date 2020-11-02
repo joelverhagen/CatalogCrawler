@@ -5,7 +5,7 @@ namespace Knapcode.CatalogCrawler
 {
     class DataDirectoryHelper
     {
-        private const string CursorFormat = "{0}/.meta/cursor.download.{1}.json";
+        private const string CursorFormat = "{0}/.meta/cursor.{1}.json";
 
         private readonly string _dataDir;
         private readonly string _host;
@@ -19,9 +19,10 @@ namespace Knapcode.CatalogCrawler
 
         public DownloadDepth Depth { get; set; }
 
-        public void AssertCursor(string dir, string value)
+        public void AssertDownloadCursor(string dir, string value)
         {
-            var cursorPath = string.Format(CursorFormat, dir, Depth);
+            var cursorSuffix = $"download.{Depth}";
+            var cursorPath = string.Format(CursorFormat, dir, cursorSuffix);
             if (Depth > DownloadDepth.ServiceIndex)
             {
                 AssertFile(value, cursorPath);
@@ -33,14 +34,21 @@ namespace Knapcode.CatalogCrawler
             }
         }
 
-        public void AssertTestData(string testDataDir, string requestPath, string filePath = null)
+        public void AssertReportCursor(ReportName name, string dir, string value)
+        {
+            var cursorSuffix = $"report.{name}";
+            var cursorPath = string.Format(CursorFormat, dir, cursorSuffix);
+            AssertFile(value, cursorPath);
+        }
+
+        public void AssertTestData(string testDataDir, string relativeTestDataPath, string filePath = null)
         {
             if (filePath == null)
             {
-                filePath = requestPath;
+                filePath = relativeTestDataPath;
             }
 
-            var testDataPath = Path.GetFullPath(Path.Combine(testDataDir, requestPath));
+            var testDataPath = Path.GetFullPath(Path.Combine(testDataDir, relativeTestDataPath));
             AssertFile(File.ReadAllText(testDataPath), filePath);
         }
 

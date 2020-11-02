@@ -7,7 +7,7 @@ namespace Knapcode.CatalogCrawler
 {
     class CatalogLeafCountByTypeReportVisitor : ICsvAggregateReportUpdater<DateTimeOffset, CatalogLeafCountByType>
     {
-        public string ReportName => "CatalogLeafCountByType";
+        public ReportName Name => ReportName.CatalogLeafCountByType;
         public IComparer<DateTimeOffset> KeyComparer => Comparer<DateTimeOffset>.Default;
 
         public CatalogLeafCountByType Merge(CatalogLeafCountByType existingValue, CatalogLeafCountByType newValue)
