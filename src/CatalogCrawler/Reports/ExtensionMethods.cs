@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using System;
 
@@ -13,6 +14,7 @@ namespace Knapcode.CatalogCrawler
 
         public static void SetDefaultConfiguration(this CsvWriter writer)
         {
+            writer.Configuration.NewLine = NewLine.Environment;
             writer.Configuration.TypeConverterOptionsCache.SetDefaultConfiguration();
         }
 
