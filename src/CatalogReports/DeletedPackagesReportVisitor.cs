@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    class DeletedPackagesVisitor : ICsvReportVisitor<DeletedPackage>
+    class DeletedPackagesReportVisitor : ICsvAppendReportVisitor<DeletedPackage>
     {
         public string Name => "DeletedPackages";
 

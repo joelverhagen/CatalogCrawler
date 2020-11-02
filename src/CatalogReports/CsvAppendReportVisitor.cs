@@ -9,20 +9,20 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    class CsvReportVisitor<T> : IVisitor
+    class CsvAppendReportVisitor<T> : IVisitor
     {
-        private readonly ICsvReportVisitor<T> _reportVisitor;
+        private readonly ICsvAppendReportVisitor<T> _visitor;
         private readonly string _csvPath;
 
-        public CsvReportVisitor(ICsvReportVisitor<T> reportVisitor, string csvPath)
+        public CsvAppendReportVisitor(ICsvAppendReportVisitor<T> visitor, string csvPath)
         {
-            _reportVisitor = reportVisitor;
+            _visitor = visitor;
             _csvPath = csvPath;
         }
 
         public async Task OnCatalogPageAsync(CatalogPage catalogPage)
         {
-            var records = await _reportVisitor.OnCatalogPageAsync(catalogPage);
+            var records = await _visitor.OnCatalogPageAsync(catalogPage);
             if (!records.Any())
             {
                 return;

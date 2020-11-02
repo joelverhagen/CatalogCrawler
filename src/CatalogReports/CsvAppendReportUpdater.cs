@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    class CsvReportUpdater
+    class CsvAppendReportUpdater
     {
         private readonly HttpClient _httpClient;
         private readonly DownloaderConfiguration _config;
         private readonly IDepthLogger _logger;
 
-        public CsvReportUpdater(HttpClient httpClient, DownloaderConfiguration config, IDepthLogger logger)
+        public CsvAppendReportUpdater(HttpClient httpClient, DownloaderConfiguration config, IDepthLogger logger)
         {
             _httpClient = httpClient;
             _config = config;
             _logger = logger;
         }
 
-        public async Task UpdateAsync<T>(ICsvReportVisitor<T> reportVisitor)
+        public async Task UpdateAsync<T>(ICsvAppendReportVisitor<T> reportVisitor)
         {
             var cursorProvider = new CursorProvider(
                 cursorSuffix: $"report.{reportVisitor.Name}",
@@ -32,7 +32,7 @@ namespace Knapcode.CatalogReports
                 _httpClient,
                 _config,
                 cursorProvider,
-                new CsvReportVisitor<T>(reportVisitor, csvPath),
+                new CsvAppendReportVisitor<T>(reportVisitor, csvPath),
                 _logger);
 
             await downloader.DownloadAsync();

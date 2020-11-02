@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Knapcode.CatalogReports
 {
-    interface ICsvReportVisitor<T>
+    interface ICsvAppendReportVisitor<T>
     {
         string Name { get; }
         Task<IReadOnlyList<T>> OnCatalogPageAsync(CatalogPage catalogPage);
