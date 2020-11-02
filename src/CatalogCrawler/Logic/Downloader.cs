@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -209,8 +210,7 @@ namespace Knapcode.CatalogCrawler
             BaseCatalogItem leafItem)
         {
             _logger.LogInformation("Downloading catalog leaf: {Url}", leafItem.Url);
-            var destPath = GetDestinationPath(leafItem.Url);
-            await SaveToDiskAsync(leafItem.Url, destPath);
+            await DownloadAndParseAsync<JObject>(leafItem.Url);
 
             lock (commitTimestampCount)
             {
