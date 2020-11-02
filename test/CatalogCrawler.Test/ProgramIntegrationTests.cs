@@ -28,6 +28,7 @@ namespace Knapcode.CatalogCrawler
             {
                 "download",
                 "--data-dir", _dataDir,
+                "--json-formatting", "Pretty",
                 "--max-commits", "1",
                 "--parallel-downloads", "4",
             });
