@@ -30,8 +30,9 @@ namespace Knapcode.CatalogReports
             var depthLogger = new DepthLogger(consoleLogger);
             
             var csvReportUpdater = new CsvReportUpdater(httpClient, config, depthLogger);
-            await csvReportUpdater.UpdateAsync(new DeletedPackagesReportVisitor());
+            await csvReportUpdater.UpdateAsync(new CatalogLeafCountByTypeReportVisitor());
             await csvReportUpdater.UpdateAsync(new CatalogLeafCountReportVisitor());
+            await csvReportUpdater.UpdateAsync(new DeletedPackagesReportVisitor());
         }
     }
 }

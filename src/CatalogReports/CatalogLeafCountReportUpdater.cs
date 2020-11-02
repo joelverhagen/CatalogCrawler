@@ -20,8 +20,7 @@ namespace Knapcode.CatalogReports
         {
             var result = catalogPage
                 .Items
-                .Select(x => x.CommitTimestamp.ToUniversalTime())
-                .GroupBy(x => new DateTimeOffset(x.Year, x.Month, x.Day, x.Hour, 0, 0, TimeSpan.Zero))
+                .GroupBy(x => new DateTimeOffset(x.CommitTimestamp.ToUniversalTime().Date, TimeSpan.Zero))
                 .ToDictionary(x => x.Key, x => x.Count());
             return Task.FromResult<IReadOnlyDictionary<DateTimeOffset, int>>(result);
         }

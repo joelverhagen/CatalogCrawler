@@ -31,6 +31,8 @@ namespace Knapcode.CatalogReports
 
         private async Task UpdateAsync(string reportName, Func<string, IVisitor> getVisitor)
         {
+            _logger.LogInformation(0, "Updating report {Name}.", reportName);
+
             var cursorProvider = new CursorFactory(
                 cursorSuffix: $"report.{reportName}",
                 defaultCursorValue: DateTimeOffset.MinValue,
