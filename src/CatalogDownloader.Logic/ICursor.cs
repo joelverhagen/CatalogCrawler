@@ -6,7 +6,7 @@ namespace Knapcode.CatalogDownloader
     {
         DateTimeOffset Value { get; }
 
-        void Read(int logDepth);
-        void Write(int logDepth, DateTimeOffset value);
+        void Read();
+        void Write(DateTimeOffset value);
     }
 }

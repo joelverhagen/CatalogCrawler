@@ -1,8 +1,11 @@
-﻿namespace Knapcode.CatalogDownloader
+﻿using System;
+
+namespace Knapcode.CatalogDownloader
 {
     interface IDepthLogger
     {
-        void LogInformation(int depth, string message, params object[] args);
-        void LogDebug(int depth, string message, params object[] args);
+        IDisposable Indent();
+        void LogInformation(string message, params object[] args);
+        void LogDebug(string message, params object[] args);
     }
 }

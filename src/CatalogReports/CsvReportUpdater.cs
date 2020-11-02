@@ -31,23 +31,26 @@ namespace Knapcode.CatalogReports
 
         private async Task UpdateAsync(string reportName, Func<string, IVisitor> getVisitor)
         {
-            _logger.LogInformation(0, "Updating report {Name}.", reportName);
+            _logger.LogInformation("Updating report {Name}.", reportName);
 
-            var cursorProvider = new CursorFactory(
-                cursorSuffix: $"report.{reportName}",
-                defaultCursorValue: DateTimeOffset.MinValue,
-                logger: _logger);
+            using (_logger.Indent())
+            {
+                var cursorProvider = new CursorFactory(
+                    cursorSuffix: $"report.{reportName}",
+                    defaultCursorValue: DateTimeOffset.MinValue,
+                    logger: _logger);
 
-            var csvPath = Path.Combine(_config.DataDirectory, "reports", $"{reportName}.csv");
+                var csvPath = Path.Combine(_config.DataDirectory, "reports", $"{reportName}.csv");
 
-            var downloader = new Downloader(
-                _httpClient,
-                _config,
-                cursorProvider,
-                getVisitor(csvPath),
-                _logger);
+                var downloader = new Downloader(
+                    _httpClient,
+                    _config,
+                    cursorProvider,
+                    getVisitor(csvPath),
+                    _logger);
 
-            await downloader.DownloadAsync();
+                await downloader.DownloadAsync();
+            }
         }
     }
 }
