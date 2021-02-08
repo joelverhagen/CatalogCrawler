@@ -5,5 +5,6 @@
         DeletedPackages,
         CatalogLeafCount,
         CatalogLeafCountByType,
+        LatestCatalogLeafByPackage,
     }
 }

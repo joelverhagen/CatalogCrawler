@@ -116,6 +116,11 @@ namespace Knapcode.CatalogCrawler
                 await csvReportUpdater.UpdateAsync(new CatalogLeafCountByTypeReportVisitor());
             }
 
+            if (reports == null || reports.Contains(ReportName.LatestCatalogLeafByPackage))
+            {
+                await csvReportUpdater.UpdateAsync(new LatestCatalogLeafByPackageVisitor());
+            }
+
             return 0;
         }
     }
