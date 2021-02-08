@@ -19,9 +19,10 @@ namespace Knapcode.CatalogCrawler
                     PackageId = x.Id,
                     PackageVersion = NuGetVersion.Parse(x.Version)
                 })
-                .ToDictionary(x => x.Key, ToLatestCatalogLeafByPackage);
+                .ToDictionary(x => x.Key, ToLatestCatalogLeafByPackage)
+                .AsReadOnly();
 
-            return Task.FromResult((IReadOnlyDictionary<PackageIdentityKey, LatestCatalogLeafByPackage>)result);
+            return Task.FromResult(result);
         }
 
         public LatestCatalogLeafByPackage Merge(LatestCatalogLeafByPackage existingValue, LatestCatalogLeafByPackage newValue)

@@ -30,14 +30,15 @@ namespace Knapcode.CatalogCrawler
                     {
                         PackageDetails = x.Count(x => x.Type == "nuget:PackageDetails"),
                         PackageDelete = x.Count(x => x.Type == "nuget:PackageDelete"),
-                    });
+                    })
+                .AsReadOnly();
 
             if (result.Sum(x => x.Value.PackageDetails + x.Value.PackageDelete) != catalogPage.Items.Count)
             {
                 throw new InvalidOperationException("Not all catalog leaf items had a known type.");
             }
 
-            return Task.FromResult<IReadOnlyDictionary<DateTimeOffset, CatalogLeafCountByType>>(result);
+            return Task.FromResult(result);
         }
     }
 }

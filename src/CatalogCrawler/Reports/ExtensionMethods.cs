@@ -2,6 +2,7 @@
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using System;
+using System.Collections.Generic;
 
 namespace Knapcode.CatalogCrawler
 {
@@ -22,6 +23,12 @@ namespace Knapcode.CatalogCrawler
         {
             var options = new TypeConverterOptions { Formats = new[] { "O" } };
             cache.AddOptions<DateTimeOffset>(options);
+        }
+
+        public static IReadOnlyDictionary<TKey, TValue> AsReadOnly<TKey, TValue>(
+            this IDictionary<TKey, TValue> dictionary)
+        {
+            return (IReadOnlyDictionary<TKey, TValue>)dictionary;
         }
     }
 }
