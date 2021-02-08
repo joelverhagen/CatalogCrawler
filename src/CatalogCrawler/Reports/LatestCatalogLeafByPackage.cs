@@ -13,5 +13,10 @@ namespace Knapcode.CatalogCrawler
         /// The commit timestamp of this catalog item.
         /// </summary>
         public DateTimeOffset CommitTimestamp { get; set; }
+
+        /// <summary>
+        /// The URL to fetch the catalog leaf.
+        /// </summary>
+        public string CatalogLeafUrl { get; set; }
     }
 }

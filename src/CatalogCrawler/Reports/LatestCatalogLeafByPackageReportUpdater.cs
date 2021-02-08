@@ -38,6 +38,7 @@ namespace Knapcode.CatalogCrawler
             {
                 Type = latestLeaf.Type,
                 CommitTimestamp = latestLeaf.CommitTimestamp,
+                CatalogLeafUrl = latestLeaf.Url,
             };
         }
     }
