@@ -20,6 +20,7 @@ namespace Knapcode.CatalogCrawler
 
         public int Compare(PackageIdentityKey x, PackageIdentityKey y)
         {
+            // See: https://github.com/NuGet/NuGet.Client/blob/27e64ba7b38abda73ac20173eb6ffaf8b1c2d3d7/src/NuGet.Core/NuGet.Packaging/Core/comparers/PackageIdentityComparer.cs#L89-L117
             if (ReferenceEquals(x, y))
             {
                 return 0;
