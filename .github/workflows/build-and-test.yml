@@ -23,6 +23,8 @@ jobs:
       run: dotnet build --configuration Release --no-restore "/p:CIRunId=${{github.run_id}}"
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
+    - name: Build non-CI version
+      run: dotnet build --configuration Release --no-restore
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
